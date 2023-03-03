@@ -5,10 +5,10 @@ from django.utils.text import Truncator
 class Tweet(models.Model):
     created_at = models.DateTimeField('instance creation date', auto_now_add=True)
     updated_at = models.DateTimeField('instance creation date', auto_now=True)
-    twitter_id = models.CharField(max_length=30)
+    twitter_id = models.CharField(max_length=30, unique=True)
     content = models.CharField(max_length=300)
     published_at = models.DateTimeField('tweet publish date')
-    in_reply_to = models.CharField(max_length=30, null=True, blank=True)
+    in_reply_to = models.CharField(max_length=30, blank=True)
     username = models.CharField(max_length=50)
     user_id = models.CharField(max_length=30)
     reply_count = models.IntegerField(default=0)
