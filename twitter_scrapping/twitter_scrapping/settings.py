@@ -123,8 +123,3 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
-API_V1_STR: str = "/api/v1"
-WSGI_APP_URL: str = "/"  # Keeping at the root to keep compatible with Django runserver
-PROJECT_NAME  =  "Twitter Scrapping"
