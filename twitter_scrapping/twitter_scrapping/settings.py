@@ -125,5 +125,5 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-if DEBUG:
-    CELERY_TASK_ALWAYS_EAGER = True
+# if DEBUG:
+#     CELERY_TASK_ALWAYS_EAGER = True
