@@ -55,7 +55,7 @@ def scrape_tweets(username, since, until, recurse=False):
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
     new_tweets = []
     for tweet_data in tweets_and_replies:
-        logger.info(f'Salvando {tweet_data}')
+        logger.debug(f'Salvando {tweet_data}')
         try:
             user_kwargs = {
                 model_key: getattr(tweet_data.user, user_key) for user_key, model_key in user_key_mapping.items()
@@ -72,16 +72,16 @@ def scrape_tweets(username, since, until, recurse=False):
                 # Tweet não é atualizado caso tenha alguma alteração
                 tweet_id = tweet_kwargs['twitter_id']
                 t = Tweet.objects.get(twitter_id=tweet_id)
-                logger.info(f'Tweet {tweet_id} já existe na base')
+                logger.debug(f'Tweet {tweet_id} já existe na base')
             except Tweet.DoesNotExist:
                 t = Tweet.objects.create(**tweet_kwargs)
-                logger.info(f'Tweet {tweet_id} criado')
+                logger.debug(f'Tweet {tweet_id} criado')
                 new_tweets.append(t)
                 
         except AttributeError as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao salvar tweet {tweet_data}')
-            logger.error(f'Exception({e}):\n{tb}')
+            logger.debug(f'Erro ao salvar tweet {tweet_data}')
+            logger.debug(f'Exception({e}):\n{tb}')
             continue
 
     logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
