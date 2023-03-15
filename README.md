@@ -1,24 +1,37 @@
 # twitter-scrapping
 
+## Setup geral
 
 ### Iniciando o Django
-
 ```
 python manage.py runserver
 ```
 
+## Setup para rodar raspagem de tweets
 
-### Iniciando um worker Celery local
+### Iniciando RabbitMQ
+```
+sudo service rabbitmq start
+```
 
+### Iniciando um Celery Worker local
 ```
 celery -A twitter_scrapping worker -l INFO -f celery.log
 ```
 
+### Iniciando um Celery Flower
+```
+celery flower
+```
 
 ### Iniciando uma task de scrapping
-
+Abra o shell do Django
 ```
 python manage.py shell
+```
+
+Importe a task, defina os parâmetros e envie ela para o worker
+```
 from tweets.tasks import scrape_tweets
 username = 'ErikakHilton'
 since = '2023-03-01'
