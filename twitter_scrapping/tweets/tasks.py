@@ -2,10 +2,17 @@ import traceback
 from celery import shared_task
 from celery.utils.log import get_task_logger
 import snscrape.modules.twitter as sntwitter
-from .models import Tweet, TwitterUser
-from .utils import convert_tweet_to_kwargs, convert_twitter_user_to_kwargs
+from .serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 
 logger = get_task_logger(__name__)
+
+
+@shared_task
+def scrape_single_tweet(tweet_id):
+    mode = sntwitter.TwitterTweetScraperMode.SINGLE
+    tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
+    tweet = next(tweet_scrapper)
+    return tweet
 
 
 @shared_task
@@ -44,28 +51,25 @@ def scrape_tweets(username, since, until, recurse=False):
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
     new_tweets = []
     for tweet_data in tweets_and_replies:
-        logger.debug(f'Salvando {tweet_data}')
         try:
-            user_kwargs = convert_twitter_user_to_kwargs(tweet_data.user)
-            try:
-                # Usuário não é atualizado caso tenha alguma alteração
-                u = TwitterUser.objects.get(twitter_id=user_kwargs['twitter_id'])
-            except TwitterUser.DoesNotExist:
-                u = TwitterUser.objects.create(**user_kwargs)
+            user_serializer = SnscrapeTwitterUserSerializer(data=tweet_data.user.__dict__)
+            if not user_serializer.is_valid():
+                logger.error(f'Erro ao salvar usuario do tweet {tweet_data}: {user_serializer.errors}')
+                continue
+                
+            if not user_serializer.get_instance():
+                user_serializer.save()
             
-            tweet_kwargs = convert_tweet_to_kwargs(tweet)
-            tweet_kwargs['user'] = u
-            try:
-                # Tweet não é atualizado caso tenha alguma alteração
-                tweet_id = tweet_kwargs['twitter_id']
-                t = Tweet.objects.get(twitter_id=tweet_id)
-                logger.debug(f'Tweet {tweet_id} já existe na base')
-            except Tweet.DoesNotExist:
-                t = Tweet.objects.create(**tweet_kwargs)
-                logger.debug(f'Tweet {tweet_id} criado')
+            tweet_serializer = SnscrapeTweetSerializer(data=tweet_data.__dict__)
+            if not tweet_serializer.is_valid():
+                logger.error(f'Erro ao salvar tweet {tweet_data}: {tweet_serializer.errors}')
+                continue
+                
+            if not tweet_serializer.get_instance():
+                t = tweet_serializer.save()
                 new_tweets.append(t)
                 
-        except AttributeError as e:
+        except Exception as e:
             tb = traceback.format_exc()
             logger.error(f'Erro ao salvar tweet {tweet_data}: {e}:\n{tb}')
             continue

@@ -10,6 +10,7 @@ charset-normalizer==3.0.1
 decorator==5.1.1
 Django==4.1.7
 django-extensions==3.2.1
+djangorestframework==3.14.0
 executing==1.2.0
 filelock==3.9.0
 flower==1.2.0

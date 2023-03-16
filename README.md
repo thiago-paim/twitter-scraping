@@ -35,7 +35,7 @@ Importe a task, defina os parâmetros e envie ela para o worker
 ```
 from tweets.tasks import scrape_tweets
 username = 'ErikakHilton'
-since = '2023-03-01'
-until = '2023-03-15'
+since = '2023-03-15'
+until = '2023-03-16'
 scrape_tweets.delay(username, since, until)
 ```

@@ -18,7 +18,7 @@ class TwitterUser(TimeStampedModel):
     listed_count = models.IntegerField(default=0)
     
     def __repr__(self) -> str:
-        return f'<Tweet: id={self.id}, username={self.username}, twitter_id={self.twitter_id}>'
+        return f'<TwitterUser: id={self.id}, username={self.username}, twitter_id={self.twitter_id}>'
     
     def __str__(self) -> str:
         return self.username

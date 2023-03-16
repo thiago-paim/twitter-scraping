@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from .models import Tweet, TwitterUser
+from .serializers import SnscrapeTwitterUserSerializer
 
 
 class TweetModelTests(TestCase):
@@ -74,3 +75,56 @@ class TweetModelTests(TestCase):
     def test_get_conversation_tweet_not_found(self):
         self.tweet3.get_conversation_tweet()
         self.assertEqual(self.tweet3.conversation_tweet, None)
+        
+        
+class SerializerTests(TestCase):
+    def setUp(self):
+        self.snscrape_user_kwargs = {
+            'username': 'GergelyOrosz',
+            'id': 30192824,
+            'displayname': 'Gergely Orosz',
+            'rawDescription': 'Writing @Pragmatic_Eng & @EngGuidebook. Advisor @mobile__dev. Uber & Skype alumni. Great tech jobs: https://t.co/MJ0eAtlaS1. Contact: https://t.co/POWftUprCb',
+            'renderedDescription': 'Writing @Pragmatic_Eng & @EngGuidebook. Advisor @mobile__dev. Uber & Skype alumni. Great tech jobs: pragmaticurl.com/talent. Contact: pragmaticurl.com/contact',
+            'verified': False,
+            'created': timezone.now(),
+            'followersCount': 201772,
+            'friendsCount': 1368,
+            'statusesCount': 24929,
+            'favouritesCount': 32243,
+            'listedCount': 2267,
+            'mediaCount': 2508,
+            'location': 'Amsterdam, The Netherlands',
+        }
+        
+        self.snscrape_tweet_kwargs = {
+            'url': 'https://twitter.com/GergelyOrosz/status/1636295637187584000',
+            'date': timezone.now(),
+            'rawContent': 'When I talked w ~70 companies about what vendor costs they are reducing, the two most frequently mentioned was AWS/GCP and Datadog. Simply because they were usually by far the biggest spend.\n\nGiven DDG is usage based, reducing it is usually easier.\n\nMore:  https://t.co/NxOVEcYCds',
+            'renderedContent': 'When I talked w ~70 companies about what vendor costs they are reducing, the two most frequently mentioned was AWS/GCP and Datadog. Simply because they were usually by far the biggest spend.\n\nGiven DDG is usage based, reducing it is usually easier.\n\nMore:  newsletter.pragmaticengineer.com/p/vendor-spend…',
+            'id': 1636295637187584000,
+            'user': None,
+            'replyCount': 18,
+            'retweetCount': 10,
+            'likeCount': 180,
+            'quoteCount': 2,
+            'conversationId': 1636295637187584000,
+            'lang': 'en',
+            'source': None,
+            'sourceUrl': None,
+            'sourceLabel': None,
+            'links': [],
+            'media': None,
+            'retweetedTweet': None,
+            'quotedTweet': None,
+            'inReplyToTweetId': None,
+            'inReplyToUser': None,
+            'mentionedUsers': None,
+            'coordinates': None,
+            'place': None,
+            'hashtags': None,
+            'viewCount': 111208,
+        }
+    
+    def test_valid_user_kwargs(self):
+        serializer = SnscrapeTwitterUserSerializer(data=self.snscrape_user_kwargs)
+        self.assertTrue(serializer.is_valid())
