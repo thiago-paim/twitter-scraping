@@ -11,7 +11,6 @@ logger = get_task_logger(__name__)
 def scrape_tweets(username, since, until, recurse=False):
     logger.info(f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})')
     if recurse:
-        # Está disparando um erro no sntwitter, necessário investigar
         mode = sntwitter.TwitterTweetScraperMode.RECURSE
     else:
         mode = sntwitter.TwitterTweetScraperMode.SCROLL
@@ -27,9 +26,19 @@ def scrape_tweets(username, since, until, recurse=False):
     logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
     tweets_and_replies = []
     for tweet_id in tweet_ids:
-        tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode)
-        for tweet in tweet_scrapper.get_items():
-            tweets_and_replies.append(tweet)
+        tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
+        try:
+            # Loop manual necessário para que erros em tweets pontuais não travem o generator
+            while True:
+                tweet = next(tweet_scrapper)
+                tweets_and_replies.append(tweet)
+        except StopIteration:
+            continue
+        except Exception as e:
+            tb = traceback.format_exc()
+            logger.debug(f'Erro ao raspar tweet {tweet_id}')
+            logger.debug(f'Exception({e}):\n{tb}')
+            continue
     logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
 
     tweet_key_mapping = {
