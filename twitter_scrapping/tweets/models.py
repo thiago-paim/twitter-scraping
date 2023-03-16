@@ -29,7 +29,10 @@ class Tweet(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
     content = models.CharField(max_length=300)
     published_at = models.DateTimeField('tweet publish date')
-    in_reply_to = models.CharField(max_length=30, null=True, blank=True)
+    in_reply_to_id = models.CharField(max_length=30, null=True, blank=True)
+    in_reply_to_tweet = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='tweet_replies_set')
+    conversation_id = models.CharField(max_length=30, null=True, blank=True)
+    conversation_tweet = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='conversation_tweets_set')
     user = models.ForeignKey(TwitterUser, on_delete=models.CASCADE, related_name='tweet_user')
     reply_count = models.IntegerField(default=0)
     retweet_count = models.IntegerField(default=0)
@@ -43,4 +46,34 @@ class Tweet(TimeStampedModel):
         return Truncator(self.content).chars(16)
     
     def is_reply(self):
-        return bool(self.in_reply_to)
+        return bool(self.in_reply_to_id)
+    
+    def get_in_reply_to_tweet(self, scrape=False):
+        if self.in_reply_to_tweet:
+            return self.in_reply_to_tweet
+        try:
+            tweet = Tweet.objects.get(twitter_id=self.in_reply_to_id)
+            self.in_reply_to_tweet = tweet
+            self.save()
+            return tweet
+        except Tweet.DoesNotExist:
+            if scrape:
+                raise NotImplementedError
+            else:
+                return None
+            
+    def get_conversation_tweet(self, scrape=False):
+        if self.conversation_tweet:
+            return self.conversation_tweet
+        try:
+            tweet = Tweet.objects.get(twitter_id=self.conversation_id)
+            self.conversation_tweet = tweet
+            self.save()
+            return tweet
+        except Tweet.DoesNotExist:
+            if scrape:
+                raise NotImplementedError
+            else:
+                return None
+        
+        
