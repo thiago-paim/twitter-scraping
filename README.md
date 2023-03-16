@@ -9,9 +9,10 @@ python manage.py runserver
 
 ## Setup para rodar raspagem de tweets
 
-### Iniciando RabbitMQ
+### Iniciando Docker e Rabbit MQ
 ```
-sudo service rabbitmq start
+sudo service docker start
+docker run -d -p 5672:5672 rabbitmq
 ```
 
 ### Iniciando um Celery Worker local
