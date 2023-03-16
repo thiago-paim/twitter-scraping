@@ -3,6 +3,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 import snscrape.modules.twitter as sntwitter
 from .models import Tweet, TwitterUser
+from .utils import convert_tweet_to_kwargs, convert_twitter_user_to_kwargs
 
 logger = get_task_logger(__name__)
 
@@ -36,46 +37,23 @@ def scrape_tweets(username, since, until, recurse=False):
             continue
         except Exception as e:
             tb = traceback.format_exc()
-            logger.debug(f'Erro ao raspar tweet {tweet_id}')
-            logger.debug(f'Exception({e}):\n{tb}')
+            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')
             continue
     logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
-
-    tweet_key_mapping = {
-        'id': 'twitter_id',
-        'rawContent': 'content',
-        'date': 'published_at',
-        'inReplyToTweetId': 'in_reply_to',
-        'replyCount': 'reply_count',
-        'retweetCount': 'retweet_count',
-        'likeCount': 'like_count',
-        'quoteCount': 'quote_count',
-    }
-    user_key_mapping = {
-        'id': 'twitter_id',
-        'username': 'username',
-        'displayname': 'display_name',
-        'rawDescription': 'description',
-        'created': 'account_created_at',
-        'location': 'location',
-        'followersCount': 'followers_count',
-    }
 
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
     new_tweets = []
     for tweet_data in tweets_and_replies:
         logger.debug(f'Salvando {tweet_data}')
         try:
-            user_kwargs = {
-                model_key: getattr(tweet_data.user, user_key) for user_key, model_key in user_key_mapping.items()
-            }
+            user_kwargs = convert_twitter_user_to_kwargs(tweet_data.user)
             try:
                 # Usuário não é atualizado caso tenha alguma alteração
                 u = TwitterUser.objects.get(twitter_id=user_kwargs['twitter_id'])
             except TwitterUser.DoesNotExist:
                 u = TwitterUser.objects.create(**user_kwargs)
             
-            tweet_kwargs = {model_key: getattr(tweet_data, tweet_key) for tweet_key, model_key in tweet_key_mapping.items()}
+            tweet_kwargs = convert_tweet_to_kwargs(tweet)
             tweet_kwargs['user'] = u
             try:
                 # Tweet não é atualizado caso tenha alguma alteração
@@ -89,8 +67,7 @@ def scrape_tweets(username, since, until, recurse=False):
                 
         except AttributeError as e:
             tb = traceback.format_exc()
-            logger.debug(f'Erro ao salvar tweet {tweet_data}')
-            logger.debug(f'Exception({e}):\n{tb}')
+            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}:\n{tb}')
             continue
 
     logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
