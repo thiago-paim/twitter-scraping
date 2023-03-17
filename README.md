@@ -25,6 +25,13 @@ celery -A twitter_scrapping worker -l INFO -f celery.log
 celery flower
 ```
 
+# Setup com Docker
+
+## Abrir shell de um container
+```
+docker exec -it twitter-scrapping-web-1 /bin/bash
+```
+
 # Exemplos de uso
 
 Os exemplos abaixo deve ser rodados no shell do Django
@@ -47,7 +54,7 @@ from tweets.tasks import scrape_single_tweet
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 
 tweet_id = '1636295637187584000'
-tweet = scrape_single_tweet(tweet_id)
+tweet = scrape_single_tweet.delay(tweet_id)
 user_serializer = SnscrapeTwitterUserSerializer(data=tweet.user.__dict__)
 if not user_serializer.is_valid():
     print(user_serializer.errors)

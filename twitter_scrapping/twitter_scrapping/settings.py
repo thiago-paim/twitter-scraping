@@ -28,8 +28,8 @@ DEBUG = int(os.environ.get("DEBUG", default=0))
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
-
+# ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -129,6 +129,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_EXPORT_PATH = f'{BASE_DIR}/exports/'
 
-# CELERY_BROKER_URL=os.environ.get("CELERY_BROKER_URL")
-# if DEBUG:
-#     CELERY_TASK_ALWAYS_EAGER = True
+CELERY_BROKER_URL=os.environ.get("CELERY_BROKER_URL")

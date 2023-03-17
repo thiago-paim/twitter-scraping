@@ -11,12 +11,30 @@ services:
     env_file:
       - ./.env.dev
   
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq_management
+    ports: 
+      - 5672:5672
+      - 15672:15672
+
   celery:
+    build: ./twitter_scrapping
     image: celery:latest
     container_name: celery
     command: celery -A twitter_scrapping worker -l INFO -f celery.log
+    volumes:
+      - ./twitter_scrapping/:/usr/src/twitter_scrapping
+    env_file:
+      - ./.env.dev
+    depends_on: 
+      - rabbitmq
 
   flower:  
-    image: mher/flower
+    image: mher/flower:0.9.5
     container_name: flower
     command: celery flower
+    env_file:
+      - ./.env.dev
+    depends_on: 
+      - rabbitmq
