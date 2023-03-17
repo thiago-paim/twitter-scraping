@@ -22,7 +22,6 @@ class TwitterUser(TimeStampedModel):
     
     def __str__(self) -> str:
         return self.username
-    
 
 
 class Tweet(TimeStampedModel):
@@ -45,8 +44,37 @@ class Tweet(TimeStampedModel):
     def __str__(self) -> str:
         return Truncator(self.content).chars(16)
     
+    def get_twitter_url(self):
+        return f'https://twitter.com/{self.user.username}/status/{self.twitter_id}'
+    
+    def as_csv_row(self):
+        # To Do: Definir quais campos irão para o csv
+        # return self.__dict__
+        return {
+            'url': self.get_twitter_url(),
+            'date': self.published_at,
+            'content': self.content,
+            'user': self.user.username,
+            'reply_count': self.reply_count,
+            'retweet_count': self.retweet_count,
+            'like_count': self.like_count,
+            'quote_count': self.quote_count,
+            'conversation_id': self.conversation_id,
+            'in_reply_to_id': self.in_reply_to_id,
+            'in_reply_to_user': self.get_in_reply_to_user()
+        }
+    
     def is_reply(self):
         return bool(self.in_reply_to_id)
+    
+    def get_in_reply_to_user(self):
+        if self.in_reply_to_tweet:
+            return self.in_reply_to_tweet.user.username
+        if self.in_reply_to_id:
+            tweet = self.get_in_reply_to_tweet()
+            if tweet:
+                return tweet.user.username
+        return None
     
     def get_in_reply_to_tweet(self, scrape=False):
         if self.in_reply_to_tweet:
