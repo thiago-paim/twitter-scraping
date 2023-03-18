@@ -1,9 +1,11 @@
 version: '3'
 
 services:
-  web:
-    build: ./twitter_scrapping
-    command: python manage.py runserver 0.0.0.0:8000
+  django:
+    container_name: django
+    build: 
+      context: ./twitter_scrapping
+    command: sh -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./twitter_scrapping/:/usr/src/twitter_scrapping/
     ports:
@@ -12,16 +14,16 @@ services:
       - ./.env.dev
   
   rabbitmq:
+    container_name: rabbitmq
     image: rabbitmq:latest
-    container_name: rabbitmq_management
     ports: 
       - 5672:5672
       - 15672:15672
 
   celery:
-    build: ./twitter_scrapping
-    image: celery:latest
     container_name: celery
+    build: 
+      context: ./twitter_scrapping
     command: celery -A twitter_scrapping worker -l INFO -f celery.log
     volumes:
       - ./twitter_scrapping/:/usr/src/twitter_scrapping
@@ -31,8 +33,8 @@ services:
       - rabbitmq
 
   flower:  
-    image: mher/flower:0.9.5
     container_name: flower
+    image: mher/flower:0.9.5
     command: celery flower
     env_file:
       - ./.env.dev

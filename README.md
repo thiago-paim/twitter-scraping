@@ -29,7 +29,7 @@ celery flower
 
 ## Abrir shell de um container
 ```
-docker exec -it twitter-scrapping-web-1 /bin/bash
+docker exec -it django /bin/bash
 ```
 
 # Exemplos de uso
@@ -50,8 +50,8 @@ scrape_tweets.delay(username, since, until)
 
 ## Raspar um único tweet e validar os dados
 ```
-from tweets.tasks import scrape_single_tweet
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
+from tweets.tasks import scrape_single_tweet
 
 tweet_id = '1636295637187584000'
 tweet = scrape_single_tweet.delay(tweet_id)
