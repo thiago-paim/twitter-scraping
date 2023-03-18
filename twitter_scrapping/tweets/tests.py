@@ -1,9 +1,12 @@
 from django.test import TestCase
 from django.utils import timezone
+from snscrape.modules.twitter import User as SNScrapeUser
 
 from .models import Tweet, TwitterUser
-from .serializers import SnscrapeTwitterUserSerializer
+from .serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 
+
+tz = timezone.get_default_timezone()
 
 class TweetModelTests(TestCase):
     
@@ -13,19 +16,19 @@ class TweetModelTests(TestCase):
             username='random_username',
             display_name='Random User',
             description='Just another user',
-            account_created_at=timezone.now(),
+            account_created_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
         )
         
         self.tweet1 = Tweet.objects.create(
             twitter_id='111',
             content='test tweet',
-            published_at=timezone.now(),
+            published_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             user=self.user
         )
         self.tweet2 = Tweet.objects.create(
             twitter_id='112',
             content='test tweet reply',
-            published_at=timezone.now(),
+            published_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             in_reply_to_id='111',
             conversation_id='111',
             user=self.user
@@ -33,7 +36,7 @@ class TweetModelTests(TestCase):
         self.tweet3 = Tweet.objects.create(
             twitter_id='113',
             content='test tweet missing reply',
-            published_at=timezone.now(),
+            published_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             in_reply_to_id='222',
             conversation_id='222',
             user=self.user
@@ -41,7 +44,7 @@ class TweetModelTests(TestCase):
         self.tweet4 = Tweet.objects.create(
             twitter_id='114',
             content='test tweet reply reply',
-            published_at=timezone.now(),
+            published_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             in_reply_to_id='112',
             conversation_id='111',
             user=self.user
@@ -86,7 +89,7 @@ class SerializerTests(TestCase):
             'rawDescription': 'Writing @Pragmatic_Eng & @EngGuidebook. Advisor @mobile__dev. Uber & Skype alumni. Great tech jobs: https://t.co/MJ0eAtlaS1. Contact: https://t.co/POWftUprCb',
             'renderedDescription': 'Writing @Pragmatic_Eng & @EngGuidebook. Advisor @mobile__dev. Uber & Skype alumni. Great tech jobs: pragmaticurl.com/talent. Contact: pragmaticurl.com/contact',
             'verified': False,
-            'created': timezone.now(),
+            'created': timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             'followersCount': 201772,
             'friendsCount': 1368,
             'statusesCount': 24929,
@@ -98,7 +101,7 @@ class SerializerTests(TestCase):
         
         self.snscrape_tweet_kwargs = {
             'url': 'https://twitter.com/GergelyOrosz/status/1636295637187584000',
-            'date': timezone.now(),
+            'date': timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
             'rawContent': 'When I talked w ~70 companies about what vendor costs they are reducing, the two most frequently mentioned was AWS/GCP and Datadog. Simply because they were usually by far the biggest spend.\n\nGiven DDG is usage based, reducing it is usually easier.\n\nMore:  https://t.co/NxOVEcYCds',
             'renderedContent': 'When I talked w ~70 companies about what vendor costs they are reducing, the two most frequently mentioned was AWS/GCP and Datadog. Simply because they were usually by far the biggest spend.\n\nGiven DDG is usage based, reducing it is usually easier.\n\nMore:  newsletter.pragmaticengineer.com/p/vendor-spend…',
             'id': 1636295637187584000,
@@ -128,3 +131,45 @@ class SerializerTests(TestCase):
     def test_valid_user_kwargs(self):
         serializer = SnscrapeTwitterUserSerializer(data=self.snscrape_user_kwargs)
         self.assertTrue(serializer.is_valid())
+        
+        
+class SnscrapeTweetSerializerTest(TestCase):
+    
+    def setUp(self):
+        self.user = TwitterUser.objects.create(
+            twitter_id='123', 
+            username='testuser',
+            display_name='Test User', 
+            description='Just a test',
+            account_created_at=timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz), 
+            location='Testville',
+            followers_count=10
+        )
+        dummy_user = SNScrapeUser(id='123', username='testuser')
+        self.tweet_data = {
+            'id': '12345',
+            'user': dummy_user,
+            'rawContent': 'Test tweet content',
+            'date': timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz),
+            'inReplyToTweetId': '98765',
+            'conversationId': '54321',
+            'replyCount': 1,
+            'retweetCount': 2,
+            'likeCount': 3,
+            'quoteCount': 4,
+        }
+    
+    def test_snscrape_tweet_serializer(self):
+        serializer = SnscrapeTweetSerializer(data=self.tweet_data)
+        self.assertTrue(serializer.is_valid())
+        tweet = serializer.save()
+        
+        self.assertEqual(tweet.twitter_id, '12345')
+        self.assertEqual(tweet.content, 'Test tweet content')
+        self.assertEqual(tweet.published_at, timezone.datetime(2022, 1, 1, 12, 0, 0, 0, tz))
+        self.assertEqual(tweet.in_reply_to_id, '98765')
+        self.assertEqual(tweet.conversation_id, '54321')
+        self.assertEqual(tweet.reply_count, 1)
+        self.assertEqual(tweet.retweet_count, 2)
+        self.assertEqual(tweet.like_count, 3)
+        self.assertEqual(tweet.quote_count, 4)

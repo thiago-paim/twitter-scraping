@@ -49,6 +49,8 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
         ]
     
     def __init__(self, instance=None, data=empty, **kwargs):
+        # To Do: Remover isso e passar a usar o serializer no campo user
+        # https://www.django-rest-framework.org/api-guide/relations/
         if data and data.get('user'):
             user = data.pop('user')
             self.user_twitter_id = user.id
