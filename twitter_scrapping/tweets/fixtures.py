@@ -1,0 +1,46 @@
+from django.utils import timezone
+from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
+
+tz = timezone.get_default_timezone()
+
+tweet1 = SNTweet(
+    url='https://twitter.com/GergelyOrosz/status/1636295637187584000',
+    date=timezone.datetime(2023, 3, 16, 9, 17, 35, tzinfo=tz),
+    rawContent='Test tweet content',
+    renderedContent='Test tweet content',
+    id=1636295637187584000,
+    user=SNUser(
+        username='GergelyOrosz',
+        id=30192824,
+        displayname='Gergely Orosz',
+        rawDescription='Writing @Pragmatic_Eng & @EngGuidebook. ',
+        renderedDescription='Writing @Pragmatic_Eng & @EngGuidebook. Advisor @mobile__dev. Uber & Skype alumni. Great tech jobs: pragmaticurl.com/talent. Contact: pragmaticurl.com/contact',
+        descriptionLinks=['http://pragmaticurl.com/talent', 'http://pragmaticurl.com/contact'],
+        verified=False,
+        created=timezone.datetime(2009, 4, 10, 10, 1, 11, tzinfo=tz),
+        followersCount=202171,
+        friendsCount=1368,
+        statusesCount=24961,
+        favouritesCount=32295,
+        listedCount=2268,
+        mediaCount=2511,
+        location='Amsterdam, The Netherlands',
+        protected=False,
+    ),
+    replyCount=22,
+    retweetCount=13,
+    likeCount=235,
+    quoteCount=2,
+    conversationId=1636295637187584000,
+    lang='en',
+    media=None,
+    retweetedTweet=None,
+    inReplyToTweetId=None,
+    inReplyToUser=None,
+    mentionedUsers=None,
+    coordinates=None,
+    place=None,
+    hashtags=None,
+    cashtags=None,
+    viewCount=161280,
+)

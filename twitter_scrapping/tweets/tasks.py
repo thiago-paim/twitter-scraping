@@ -52,6 +52,16 @@ def scrape_tweets(username, since, until, recurse=False):
     new_tweets = []
     for tweet_data in tweets_and_replies:
         try:
+            # To Do:
+            # Converter tweet_data para dicionarios e jogar direto para o serializer
+            # data = tweet_data.__dict__
+            # data['user'] = tweet_data.user.__dict__
+            # tweet_serializer = SnscrapeTweetSerializer(data=data)
+            
+            # Criar método .create() no SnscrapeTweetSerializer
+            # Testar como o serializer vai se portar em casos de criação e atualização
+            
+            
             user_serializer = SnscrapeTwitterUserSerializer(data=tweet_data.user.__dict__)
             if not user_serializer.is_valid():
                 logger.error(f'Erro ao salvar usuario do tweet {tweet_data}: {user_serializer.errors}')

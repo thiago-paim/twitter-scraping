@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.fields import empty
+from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
 from .models import Tweet, TwitterUser
-
 
 
 class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):
@@ -19,19 +19,25 @@ class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):
             'id', 'username', 'displayname', 'rawDescription', 'created',
             'location', 'followersCount'
         ]
+    
+    def __init__(self, instance=None, data=empty, **kwargs):
+        if isinstance(data, SNUser):
+            data = data.__dict__
+        super().__init__(instance, data, **kwargs)
         
-    def get_instance(self):
-        try:
-            instance = TwitterUser.objects.get(
-                twitter_id=self.validated_data['twitter_id']
-            )
-        except TwitterUser.DoesNotExist:
-            instance = None
-        return instance
+    # def get_instance(self):
+    #     try:
+    #         instance = TwitterUser.objects.get(
+    #             twitter_id=self.validated_data['twitter_id']
+    #         )
+    #     except TwitterUser.DoesNotExist:
+    #         instance = None
+    #     return instance
 
         
 class SnscrapeTweetSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='twitter_id')
+    user = SnscrapeTwitterUserSerializer()
     rawContent = serializers.CharField(source='content')
     date = serializers.DateTimeField(source='published_at')
     inReplyToTweetId = serializers.CharField(source='in_reply_to_id', allow_null=True, allow_blank=True)
@@ -44,29 +50,35 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tweet
         fields = [
-            'id', 'rawContent', 'date', 'inReplyToTweetId', 'conversationId',
+            'id', 'user', 'rawContent', 'date', 'inReplyToTweetId', 'conversationId',
             'replyCount', 'retweetCount', 'likeCount', 'quoteCount'
         ]
     
     def __init__(self, instance=None, data=empty, **kwargs):
-        # To Do: Remover isso e passar a usar o serializer no campo user
-        # https://www.django-rest-framework.org/api-guide/relations/
-        if data and data.get('user'):
-            user = data.pop('user')
-            self.user_twitter_id = user.id
+        if isinstance(data, SNTweet):
+            data.user = data.user.__dict__
+            data = data.__dict__
         super().__init__(instance, data, **kwargs)
-        
-    def create(self, validated_data):
-        validated_data['user'] = TwitterUser.objects.get(
-            twitter_id=self.user_twitter_id
-        )
-        return super().create(validated_data)
     
-    def get_instance(self):
-        try:
-            instance = Tweet.objects.get(
-                twitter_id=self.validated_data['twitter_id']
-            )
-        except Tweet.DoesNotExist:
-            instance = None
-        return instance
+    # def __init__(self, instance=None, data=empty, **kwargs):
+    #     # To Do: Remover isso e passar a usar o serializer no campo user
+    #     # https://www.django-rest-framework.org/api-guide/relations/#writable-nested-serializers
+    #     if data and data.get('user'):
+    #         user = data.pop('user')
+    #         self.user_twitter_id = user.id
+    #     super().__init__(instance, data, **kwargs)
+        
+    # def create(self, validated_data):
+    #     validated_data['user'] = TwitterUser.objects.get(
+    #         twitter_id=self.user_twitter_id
+    #     )
+    #     return super().create(validated_data)
+    
+    # def get_instance(self):
+    #     try:
+    #         instance = Tweet.objects.get(
+    #             twitter_id=self.validated_data['twitter_id']
+    #         )
+    #     except Tweet.DoesNotExist:
+    #         instance = None
+    #     return instance
