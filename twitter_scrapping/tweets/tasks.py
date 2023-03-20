@@ -24,11 +24,11 @@ def scrape_tweets(username, since, until, recurse=False):
     else:
         mode = sntwitter.TwitterTweetScraperMode.SCROLL
     query = f'from:{username} since:{since} until:{until}'
-    user_scrapping_results = sntwitter.TwitterSearchScraper(query)
-
+    user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
+    
     logger.info(f'Iterando tweets do usuário "{username}"')
     tweet_ids = []
-    for tweet in user_scrapping_results.get_items():
+    for tweet in user_scrapping_results:
         tweet_ids.append(tweet.id)
     logger.info(f'Encontrados {len(tweet_ids)} tweets')
 
