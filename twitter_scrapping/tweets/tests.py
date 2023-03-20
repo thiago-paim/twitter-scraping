@@ -211,17 +211,17 @@ class TasksTest(TestCase):
         self.tweet1 = deepcopy(tweet1)
         self.tweet1_incomplete = deepcopy(tweet1_incomplete)
     
-    # @patch('tweets.serializers.SnscrapeTweetSerializer.save')
-    # def test_save_scrapped_tweet(self, save_mock):
-    #     save_scrapped_tweet(self.tweet1)
-    #     save_mock.assert_called()
+    @patch('tweets.serializers.SnscrapeTweetSerializer.save')
+    def test_save_scrapped_tweet(self, save_mock):
+        save_scrapped_tweet(self.tweet1)
+        save_mock.assert_called()
     
-    # @patch('tweets.serializers.SnscrapeTweetSerializer.save')
-    # def test_save_invalid_scrapped_tweet(self, save_mock):
-    #     from rest_framework.serializers import ValidationError
-    #     with self.assertRaises(ValidationError):
-    #         save_scrapped_tweet(self.tweet1_incomplete)
-    #         save_mock.assert_not_called()
+    @patch('tweets.serializers.SnscrapeTweetSerializer.save')
+    def test_save_invalid_scrapped_tweet(self, save_mock):
+        from rest_framework.serializers import ValidationError
+        with self.assertRaises(ValidationError):
+            save_scrapped_tweet(self.tweet1_incomplete)
+            save_mock.assert_not_called()
     
     @patch('snscrape.modules.twitter.TwitterSearchScraper.get_items')
     @patch('snscrape.modules.twitter.TwitterTweetScraper.get_items')
