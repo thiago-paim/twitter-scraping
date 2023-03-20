@@ -11,8 +11,6 @@ class TwitterUser(TimeStampedModel):
     account_created_at = models.DateTimeField('Twitter account creation date')
     location = models.CharField(max_length=50, blank=True)
     followers_count = models.IntegerField(default=0)
-    
-    # Apagar e recriar migrations
     following_count = models.IntegerField(default=0)
     tweet_count = models.IntegerField(default=0)
     listed_count = models.IntegerField(default=0)
