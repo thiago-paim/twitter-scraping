@@ -1,7 +1,6 @@
 from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
-from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
 
 from .fixtures import tweet1, tweet1_updated_tweet, tweet1_updated_user, tweet1_updated_both
 from .models import Tweet, TwitterUser
