@@ -1,10 +1,12 @@
 from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
+from unittest.mock import patch
 
-from .fixtures import tweet1, tweet1_updated_tweet, tweet1_updated_user, tweet1_updated_both
+from .fixtures import tweet1, tweet1_updated_tweet, tweet1_updated_user, tweet1_updated_both, tweet1_incomplete
 from .models import Tweet, TwitterUser
 from .serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
+from .tasks import save_scrapped_tweet
 
 
 tz = timezone.get_default_timezone()
@@ -201,3 +203,23 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(user.following_count, 1368)
         self.assertEqual(user.tweet_count, 24965)
         self.assertEqual(user.listed_count, 2268)
+
+
+class TasksTest(TestCase):
+    
+    def setUp(self):
+        self.tweet1 = deepcopy(tweet1)
+        self.tweet1_incomplete = deepcopy(tweet1_incomplete)
+    
+    @patch('tweets.serializers.SnscrapeTweetSerializer.save')
+    def test_save_scrapped_tweet(self, save_mock):
+        save_scrapped_tweet(self.tweet1)
+        save_mock.assert_called()
+    
+    @patch('tweets.serializers.SnscrapeTweetSerializer.save')
+    def test_save_invalid_scrapped_tweet(self, save_mock):
+        from rest_framework.serializers import ValidationError
+        with self.assertRaises(ValidationError):
+            save_scrapped_tweet(self.tweet1_incomplete)
+            save_mock.assert_not_called()
+        

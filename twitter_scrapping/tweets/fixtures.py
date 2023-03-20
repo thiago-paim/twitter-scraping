@@ -26,6 +26,12 @@ user1_updated_dict = {
 user1_updated = deepcopy(user1)
 for attr, value in user1_updated_dict.items():
     setattr(user1_updated, attr, value)
+    
+    
+user1_incomplete = deepcopy(user1)
+user1_incomplete_remove_fields = ['username', 'followersCount']
+for attr in user1_incomplete_remove_fields:
+    delattr(user1_incomplete, attr)
 
 
 tweet1 = SNTweet(
@@ -78,3 +84,9 @@ tweet1_updated_both_dict = {
 tweet1_updated_both = deepcopy(tweet1)
 for attr, value in tweet1_updated_both_dict.items():
     setattr(tweet1_updated_both, attr, value)
+
+
+tweet1_incomplete = deepcopy(tweet1)
+tweet1_incomplete_remove_fields = ['id', 'rawContent', 'replyCount', 'conversationId']
+for attr in tweet1_incomplete_remove_fields:
+    delattr(tweet1_incomplete, attr)

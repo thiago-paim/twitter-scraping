@@ -1,8 +1,9 @@
 import traceback
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from rest_framework.serializers import ValidationError
 import snscrape.modules.twitter as sntwitter
-from .serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
+from .serializers import SnscrapeTweetSerializer
 
 logger = get_task_logger(__name__)
 
@@ -52,36 +53,24 @@ def scrape_tweets(username, since, until, recurse=False):
     new_tweets = []
     for tweet_data in tweets_and_replies:
         try:
-            # To Do:
-            # Converter tweet_data para dicionarios e jogar direto para o serializer
-            # data = tweet_data.__dict__
-            # data['user'] = tweet_data.user.__dict__
-            # tweet_serializer = SnscrapeTweetSerializer(data=data)
+            t = save_scrapped_tweet(tweet_data)
+            new_tweets.append(t)
+        
+        except ValidationError as e:
+            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}')
             
-            # Criar método .create() no SnscrapeTweetSerializer
-            # Testar como o serializer vai se portar em casos de criação e atualização
-            
-            
-            user_serializer = SnscrapeTwitterUserSerializer(data=tweet_data.user.__dict__)
-            if not user_serializer.is_valid():
-                logger.error(f'Erro ao salvar usuario do tweet {tweet_data}: {user_serializer.errors}')
-                continue
-                
-            if not user_serializer.get_instance():
-                user_serializer.save()
-            
-            tweet_serializer = SnscrapeTweetSerializer(data=tweet_data.__dict__)
-            if not tweet_serializer.is_valid():
-                logger.error(f'Erro ao salvar tweet {tweet_data}: {tweet_serializer.errors}')
-                continue
-                
-            if not tweet_serializer.get_instance():
-                t = tweet_serializer.save()
-                new_tweets.append(t)
-                
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}:\n{tb}')
-            continue
-
+            logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
+            continue   
+        
     logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
+   
+
+def save_scrapped_tweet(tweet_data):
+    tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
+    if tweet_serializer.is_valid():
+        tweet = tweet_serializer.save()
+        return tweet
+    else:
+        raise ValidationError(tweet_serializer.errors)
