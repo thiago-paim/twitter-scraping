@@ -1,6 +1,7 @@
 from django.db import models
+from django.utils import timezone
 from django.utils.text import Truncator
-from django_extensions.db.models import TimeStampedModel 
+from django_extensions.db.models import TimeStampedModel
 
 
 class TwitterUser(TimeStampedModel):
@@ -64,7 +65,7 @@ class Tweet(TimeStampedModel):
     
     def is_reply(self):
         return bool(self.in_reply_to_id)
-    
+
     def get_in_reply_to_user(self):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet.user.username
@@ -73,7 +74,7 @@ class Tweet(TimeStampedModel):
             if tweet:
                 return tweet.user.username
         return None
-    
+
     def get_in_reply_to_tweet(self, scrape=False):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet
@@ -87,7 +88,7 @@ class Tweet(TimeStampedModel):
                 raise NotImplementedError
             else:
                 return None
-            
+
     def get_conversation_tweet(self, scrape=False):
         if self.conversation_tweet:
             return self.conversation_tweet
@@ -103,3 +104,37 @@ class Tweet(TimeStampedModel):
                 return None
         
         
+class ScrappingRequest(TimeStampedModel):
+    TASK_STATUS_CHOICES = [
+        ('created', 'Created'),
+        ('started', 'Started'),
+        ('finished', 'Finished'),
+        ('interrupted', 'Interrupted'),
+    ]
+    username = models.CharField(max_length=50, null=True, blank=True)
+    since = models.DateTimeField(null=True, blank=True)
+    until = models.DateTimeField(null=True, blank=True)
+    started = models.DateTimeField(null=True, blank=True)
+    finished = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=12, choices=TASK_STATUS_CHOICES, default='created')
+    
+    def create_scrapping_task(self):
+        from .tasks import scrape_tweets
+        if self.status != 'created':
+            return
+        scrape_tweets.delay(self.id)
+        
+    def start(self):
+        self.status = 'started'
+        self.started = timezone.now()
+        self.save()
+        
+    def finish(self):
+        self.status = 'finished'
+        self.finished = timezone.now()
+        self.save()
+
+    def interrupt(self):
+        self.status = 'interrupted'
+        self.finished = timezone.now()
+        self.save()

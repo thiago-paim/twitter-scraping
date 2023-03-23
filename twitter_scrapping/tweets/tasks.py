@@ -17,8 +17,17 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
-def scrape_tweets(username, since, until, recurse=False):
-    logger.info(f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})')
+# def scrape_tweets(username, since, until, recurse=False):
+def scrape_tweets(req_id, recurse=False):
+    from .models import ScrappingRequest
+    req = ScrappingRequest.objects.get(id=req_id)
+    username = req.username
+    since = req.since
+    until = req.until
+    logger.info(
+        f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})'
+    )
+    req.start()
     if recurse:
         mode = sntwitter.TwitterTweetScraperMode.RECURSE
     else:
@@ -65,6 +74,7 @@ def scrape_tweets(username, since, until, recurse=False):
             continue   
         
     logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
+    req.finish()
    
 
 def save_scrapped_tweet(tweet_data):
