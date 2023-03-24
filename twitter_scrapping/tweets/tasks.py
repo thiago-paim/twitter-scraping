@@ -17,7 +17,7 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
-def scrape_tweets(req_id, recurse=False):
+def scrape_tweets(req_id):
     from .models import ScrappingRequest
     req = ScrappingRequest.objects.get(id=req_id)
     req.start()
@@ -26,10 +26,10 @@ def scrape_tweets(req_id, recurse=False):
     since = req.since.strftime('%Y-%m-%dT%H:%M:%SZ')
     until = req.until.strftime('%Y-%m-%dT%H:%M:%SZ')
     logger.info(
-        f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})'
+        f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})'
     )
 
-    if recurse:
+    if req.recurse:
         mode = sntwitter.TwitterTweetScraperMode.RECURSE
     else:
         mode = sntwitter.TwitterTweetScraperMode.SCROLL
@@ -77,7 +77,7 @@ def scrape_tweets(req_id, recurse=False):
             logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
         
     logger.info(
-        f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}):' + 
+        f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):' + 
         f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
     )
     req.finish()

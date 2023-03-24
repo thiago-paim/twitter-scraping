@@ -14,6 +14,7 @@ class ScrappingRequest(TimeStampedModel):
     username = models.CharField(max_length=50, null=True, blank=True)
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
+    recurse = models.BooleanField(default=False)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=12, choices=TASK_STATUS_CHOICES, default='created')
