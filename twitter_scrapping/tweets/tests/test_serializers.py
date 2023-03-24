@@ -23,7 +23,9 @@ class SnscrapeTweetSerializerTest(TestCase):
         
         serializer = SnscrapeTweetSerializer(data=self.tweet1)
         self.assertTrue(serializer.is_valid())
-        tweet = serializer.save()
+        
+        tweet, created = serializer.save()
+        self.assertEqual(created, True)
         self.assertEqual(tweet.twitter_id, '1636295637187584000')
         self.assertEqual(tweet.content, 'Test tweet content')
         self.assertEqual(tweet.published_at, timezone.datetime(2023, 3, 16, 9, 17, 35, tzinfo=tz))
@@ -41,7 +43,8 @@ class SnscrapeTweetSerializerTest(TestCase):
         serializer.is_valid()
         self.assertTrue(serializer.is_valid())
         
-        tweet = serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, True)
         self.assertEqual(tweet.twitter_id, '1636295637187584000')
         self.assertEqual(tweet.content, 'Test tweet content')
         self.assertEqual(tweet.published_at, timezone.datetime(2023, 3, 16, 9, 17, 35, tzinfo=tz))
@@ -66,12 +69,14 @@ class SnscrapeTweetSerializerTest(TestCase):
     def test_update_tweet_only(self):
         serializer = SnscrapeTweetSerializer(data=self.tweet1)
         self.assertTrue(serializer.is_valid())
-        serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, True)
         
         serializer = SnscrapeTweetSerializer(data=self.tweet1_updated_tweet)
         self.assertTrue(serializer.is_valid())
         
-        tweet = serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, False)
         self.assertEqual(tweet.twitter_id, '1636295637187584000')
         self.assertEqual(tweet.reply_count, 32)
         self.assertEqual(tweet.retweet_count, 13)
@@ -88,12 +93,14 @@ class SnscrapeTweetSerializerTest(TestCase):
     def test_update_user_only(self):
         serializer = SnscrapeTweetSerializer(data=self.tweet1)
         self.assertTrue(serializer.is_valid())
-        serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, True)
         
         serializer = SnscrapeTweetSerializer(data=self.tweet1_updated_user)
         self.assertTrue(serializer.is_valid())
         
-        tweet = serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, False)
         self.assertEqual(tweet.twitter_id, '1636295637187584000')
         self.assertEqual(tweet.reply_count, 22)
         self.assertEqual(tweet.retweet_count, 13)
@@ -110,12 +117,14 @@ class SnscrapeTweetSerializerTest(TestCase):
     def test_update_tweet_and_user(self):
         serializer = SnscrapeTweetSerializer(data=self.tweet1)
         self.assertTrue(serializer.is_valid())
-        serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, True)
         
         serializer = SnscrapeTweetSerializer(data=self.tweet1_updated_both)
         self.assertTrue(serializer.is_valid())
         
-        tweet = serializer.save()
+        tweet, created = serializer.save()
+        self.assertEqual(created, False)
         self.assertEqual(tweet.twitter_id, '1636295637187584000')
         self.assertEqual(tweet.reply_count, 32)
         self.assertEqual(tweet.retweet_count, 13)

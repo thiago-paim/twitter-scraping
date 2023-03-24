@@ -71,17 +71,17 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
             twitter_id=user_data.get('twitter_id'),
             defaults=user_data
         )
-        return user
+        return user, created
     
     def create(self, validated_data):
-        user = self.get_or_create_user(validated_data)
+        user, _ = self.get_or_create_user(validated_data)
         tweet = Tweet.objects.create(user=user, **validated_data)
-        return tweet
+        return tweet, True
     
     def update(self, instance, validated_data):
-        user = self.get_or_create_user(validated_data)
+        user, _ = self.get_or_create_user(validated_data)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
             
-        return instance
+        return instance, False

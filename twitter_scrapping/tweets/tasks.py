@@ -21,13 +21,15 @@ def scrape_single_tweet(tweet_id):
 def scrape_tweets(req_id, recurse=False):
     from .models import ScrappingRequest
     req = ScrappingRequest.objects.get(id=req_id)
+    req.start()
+    
     username = req.username
-    since = req.since
-    until = req.until
+    since = req.since.strftime('%Y-%m-%dT%H:%M:%SZ')
+    until = req.until.strftime('%Y-%m-%dT%H:%M:%SZ')
     logger.info(
         f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})'
     )
-    req.start()
+
     if recurse:
         mode = sntwitter.TwitterTweetScraperMode.RECURSE
     else:
@@ -54,16 +56,19 @@ def scrape_tweets(req_id, recurse=False):
             continue
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')
-            continue
+            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')            
     logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
 
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
-    new_tweets = []
+    created_tweets = []
+    updated_tweets = []
     for tweet_data in tweets_and_replies:
         try:
-            t = save_scrapped_tweet(tweet_data)
-            new_tweets.append(t)
+            t, created = save_scrapped_tweet(tweet_data)
+            if created:
+                created_tweets.append(t)
+            else:
+                updated_tweets.append(t)
         
         except ValidationError as e:
             logger.error(f'Erro ao salvar tweet {tweet_data}: {e}')
@@ -71,16 +76,18 @@ def scrape_tweets(req_id, recurse=False):
         except Exception as e:
             tb = traceback.format_exc()
             logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
-            continue   
         
-    logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
+    logger.info(
+        f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}):' + 
+        f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
+    )
     req.finish()
    
 
 def save_scrapped_tweet(tweet_data):
     tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
     if tweet_serializer.is_valid():
-        tweet = tweet_serializer.save()
-        return tweet
+        tweet, created = tweet_serializer.save()
+        return tweet, created
     else:
         raise ValidationError(tweet_serializer.errors)
