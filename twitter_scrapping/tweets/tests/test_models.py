@@ -2,7 +2,7 @@ from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
 
-from tweets.models import Tweet, TwitterUser
+from tweets.models import Tweet, TwitterUser, ScrappingRequest
 
 tz = timezone.get_default_timezone()
 
@@ -77,4 +77,3 @@ class TweetModelTests(TestCase):
     def test_get_conversation_tweet_not_found(self):
         self.tweet3.get_conversation_tweet()
         self.assertEqual(self.tweet3.conversation_tweet, None)
-        

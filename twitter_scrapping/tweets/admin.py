@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tweet, TwitterUser 
+from .models import Tweet, TwitterUser, ScrappingRequest
 
 
 class BaseUsernameFilter(admin.SimpleListFilter):
@@ -46,7 +46,7 @@ class TweetAdmin(admin.ModelAdmin):
         'created', 'modified', 'published_at', UserUsernameFilter, 
         ReplyToUsernameFilter, ConversationUsernameFilter,
     )
-    raw_id_fields = ('user', 'in_reply_to_tweet', 'conversation_tweet')
+    raw_id_fields = ('user', 'in_reply_to_tweet', 'conversation_tweet', 'scrapping_request')
     
     def get_reply_to_user(self, obj):
         try:
@@ -66,3 +66,14 @@ class TweetAdmin(admin.ModelAdmin):
 @admin.register(TwitterUser)
 class TwitterUserAdmin(admin.ModelAdmin):
     list_display = ('id', 'twitter_id', 'username', 'display_name', 'location')   
+    
+
+@admin.register(ScrappingRequest)
+class ScrappingRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'username', 'since', 'until', 'started', 'finished')
+    actions = ['start_scrapping']
+    
+    def start_scrapping(self, request, queryset):
+        for obj in queryset:
+            obj.create_scrapping_task()
+    start_scrapping.short_description = 'Start scrapping tasks'

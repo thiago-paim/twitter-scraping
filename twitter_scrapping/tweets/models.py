@@ -1,6 +1,51 @@
 from django.db import models
+from django.utils import timezone
 from django.utils.text import Truncator
-from django_extensions.db.models import TimeStampedModel 
+from django_extensions.db.models import TimeStampedModel
+
+
+class ScrappingRequest(TimeStampedModel):
+    TASK_STATUS_CHOICES = [
+        ('created', 'Created'),
+        ('started', 'Started'),
+        ('finished', 'Finished'),
+        ('interrupted', 'Interrupted'),
+    ]
+    username = models.CharField(max_length=50, null=True, blank=True)
+    since = models.DateTimeField(null=True, blank=True)
+    until = models.DateTimeField(null=True, blank=True)
+    recurse = models.BooleanField(default=False)
+    started = models.DateTimeField(null=True, blank=True)
+    finished = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=12, choices=TASK_STATUS_CHOICES, default='created')
+    
+    # create a property to calculate the duration of the task
+    @property
+    def duration(self):
+        if self.started and self.finished:
+            return self.finished - self.started
+        return None
+    
+    def create_scrapping_task(self):
+        from .tasks import scrape_tweets
+        if self.status != 'created':
+            return
+        scrape_tweets.delay(self.id)
+        
+    def start(self):
+        self.status = 'started'
+        self.started = timezone.now()
+        self.save()
+        
+    def finish(self):
+        self.status = 'finished'
+        self.finished = timezone.now()
+        self.save()
+
+    def interrupt(self):
+        self.status = 'interrupted'
+        self.finished = timezone.now()
+        self.save()
 
 
 class TwitterUser(TimeStampedModel):
@@ -35,6 +80,7 @@ class Tweet(TimeStampedModel):
     retweet_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
+    scrapping_request = models.ForeignKey(ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name='tweets')
 
     def __repr__(self) -> str:
         return f'<Tweet: id={self.id}, user={self.user}, content=\'{Truncator(self.content).chars(16)}\', twitter_id={self.twitter_id}>'
@@ -46,8 +92,6 @@ class Tweet(TimeStampedModel):
         return f'https://twitter.com/{self.user.username}/status/{self.twitter_id}'
     
     def as_csv_row(self):
-        # To Do: Definir quais campos irão para o csv
-        # return self.__dict__
         return {
             'url': self.get_twitter_url(),
             'date': self.published_at,
@@ -64,7 +108,7 @@ class Tweet(TimeStampedModel):
     
     def is_reply(self):
         return bool(self.in_reply_to_id)
-    
+
     def get_in_reply_to_user(self):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet.user.username
@@ -73,7 +117,7 @@ class Tweet(TimeStampedModel):
             if tweet:
                 return tweet.user.username
         return None
-    
+
     def get_in_reply_to_tweet(self, scrape=False):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet
@@ -87,7 +131,7 @@ class Tweet(TimeStampedModel):
                 raise NotImplementedError
             else:
                 return None
-            
+
     def get_conversation_tweet(self, scrape=False):
         if self.conversation_tweet:
             return self.conversation_tweet
@@ -101,5 +145,3 @@ class Tweet(TimeStampedModel):
                 raise NotImplementedError
             else:
                 return None
-        
-        

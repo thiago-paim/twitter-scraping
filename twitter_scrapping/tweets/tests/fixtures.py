@@ -90,4 +90,3 @@ tweet1_incomplete = deepcopy(tweet1)
 tweet1_incomplete_remove_fields = ['id', 'rawContent', 'replyCount', 'conversationId']
 for attr in tweet1_incomplete_remove_fields:
     delattr(tweet1_incomplete, attr)
-    
