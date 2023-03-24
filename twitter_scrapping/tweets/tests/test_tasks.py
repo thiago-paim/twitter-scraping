@@ -19,19 +19,19 @@ class TasksTest(TestCase):
             username='GergelyOrosz',
             since=timezone.datetime(2023, 3, 15, tzinfo=tz),
             until=timezone.datetime(2023, 3, 17, tzinfo=tz),
-            
         )
 
     def test_save_scrapped_tweet(self):
-        t, created = save_scrapped_tweet(self.tweet1)
+        t, created = save_scrapped_tweet(self.tweet1, self.req.id)
         self.assertEqual(created, True)
         self.assertEqual(t.twitter_id, str(self.tweet1.id))
+        self.assertEqual(t.scrapping_request, self.req)
     
     @patch('tweets.serializers.SnscrapeTweetSerializer.save')
     def test_save_invalid_scrapped_tweet(self, save_mock):
         from rest_framework.serializers import ValidationError
         with self.assertRaises(ValidationError):
-            save_scrapped_tweet(self.tweet1_incomplete)
+            save_scrapped_tweet(self.tweet1_incomplete, self.req.id)
             save_mock.assert_not_called()
     
     @patch('snscrape.modules.twitter.TwitterSearchScraper.get_items')
@@ -42,4 +42,4 @@ class TasksTest(TestCase):
         tweet_scrapper_mock.side_effect = [[self.tweet1].__iter__()]
         
         scrape_tweets(self.req.id)
-        save_scrapped_tweet_mock.assert_called_with(self.tweet1)
+        save_scrapped_tweet_mock.assert_called_with(self.tweet1, self.req.id)

@@ -46,7 +46,7 @@ class TweetAdmin(admin.ModelAdmin):
         'created', 'modified', 'published_at', UserUsernameFilter, 
         ReplyToUsernameFilter, ConversationUsernameFilter,
     )
-    raw_id_fields = ('user', 'in_reply_to_tweet', 'conversation_tweet')
+    raw_id_fields = ('user', 'in_reply_to_tweet', 'conversation_tweet', 'scrapping_request')
     
     def get_reply_to_user(self, obj):
         try:

@@ -17,7 +17,6 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
-# def scrape_tweets(username, since, until, recurse=False):
 def scrape_tweets(req_id, recurse=False):
     from .models import ScrappingRequest
     req = ScrappingRequest.objects.get(id=req_id)
@@ -64,7 +63,7 @@ def scrape_tweets(req_id, recurse=False):
     updated_tweets = []
     for tweet_data in tweets_and_replies:
         try:
-            t, created = save_scrapped_tweet(tweet_data)
+            t, created = save_scrapped_tweet(tweet_data, req_id)
             if created:
                 created_tweets.append(t)
             else:
@@ -84,7 +83,8 @@ def scrape_tweets(req_id, recurse=False):
     req.finish()
    
 
-def save_scrapped_tweet(tweet_data):
+def save_scrapped_tweet(tweet_data, req_id):
+    tweet_data.scrapping_request = req_id
     tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
     if tweet_serializer.is_valid():
         tweet, created = tweet_serializer.save()

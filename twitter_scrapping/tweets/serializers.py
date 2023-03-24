@@ -46,7 +46,7 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
         model = Tweet
         fields = [
             'id', 'user', 'rawContent', 'date', 'inReplyToTweetId', 'conversationId',
-            'replyCount', 'retweetCount', 'likeCount', 'quoteCount'
+            'replyCount', 'retweetCount', 'likeCount', 'quoteCount', 'scrapping_request'
         ]
     
     def __init__(self, instance=None, data=empty, **kwargs):
