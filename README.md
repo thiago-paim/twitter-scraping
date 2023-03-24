@@ -32,23 +32,41 @@ Os exemplos abaixo deve ser rodados no shell do Django
 python manage.py shell
 ```
 
-## Iniciando uma task de scrapping
+## Iniciando uma task de scrapping pelo admin
+
+- Acesse `http://127.0.0.1:8000/admin/tweets/scrappingrequest/`
+- Clique em "ADD SCRAPPING REQUEST"
+- Preencha os campos "Username", "Since" e "Until"
+    - Se quiser realizar um scrapping recursivo, marque a opção "Recurse"
+- Clique em "SAVE"
+- Na tela de listagem, selecione a request que acabou de criar
+- Clique em "Action", selecione "Start scrapping tasks", e então clique em Go
+
+## Iniciando uma task de scrapping manualmente
+
+Precisamos criar um objeto `ScrappingRequest` com os parâmetros do scrapping, e então chamar o método para iniciar a task
 ```
-from tweets.tasks import scrape_tweets
+from tweets.models import ScrappingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
-until = '2022-10-01'
-scrape_tweets.delay(username, since, until)
+until = '2022-09-02'
+req = ScrappingRequest.objects.create(
+    username=username, since=since, until=until
+)
+req.create_scrapping_task()
 ```
 
-Para raspar todas as respostas e conversas derivadas dos tweets, user `recurse=True`.
-Este parâmetro pode aumentar significativamente o tempo de raspagem.
+Para raspar todas as respostas e conversas derivadas dos tweets, podemos usar `recurse=True`.
+Porém este parâmetro pode aumentar significativamente o tempo de raspagem.
 ```
-from tweets.tasks import scrape_tweets
+from tweets.models import ScrappingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
-until = '2022-10-01'
-scrape_tweets.delay(username, since, until, recurse=True)
+until = '2022-09-02'
+req = ScrappingRequest.objects.create(
+    username=username, since=since, until=until, recurse=True
+)
+req.create_scrapping_task()
 ```
 
 ## Raspar um único tweet e validar os dados
