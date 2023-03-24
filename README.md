@@ -17,7 +17,7 @@ docker run -d -p 5672:5672 rabbitmq
 
 ## Iniciando um Celery Worker local
 ```
-celery -A twitter_scrapping worker -l INFO -f celery.log
+celery -A twitter_scrapping worker -l INFO -f celery3.log
 ```
 
 ## Iniciando um Celery Flower
@@ -35,10 +35,20 @@ python manage.py shell
 ## Iniciando uma task de scrapping
 ```
 from tweets.tasks import scrape_tweets
-username = 'ErikakHilton'
-since = '2023-03-15'
-until = '2023-03-16'
+username = 'andreawerner_'
+since = '2022-09-01'
+until = '2022-10-01'
 scrape_tweets.delay(username, since, until)
+```
+
+Para raspar todas as respostas e conversas derivadas dos tweets, user `recurse=True`.
+Este parâmetro pode aumentar significativamente o tempo de raspagem.
+```
+from tweets.tasks import scrape_tweets
+username = 'andreawerner_'
+since = '2022-09-01'
+until = '2022-10-01'
+scrape_tweets.delay(username, since, until, recurse=True)
 ```
 
 ## Raspar um único tweet e validar os dados
