@@ -71,3 +71,9 @@ class TwitterUserAdmin(admin.ModelAdmin):
 @admin.register(ScrappingRequest)
 class ScrappingRequestAdmin(admin.ModelAdmin):
     list_display = ('id', 'status', 'username', 'since', 'until', 'started', 'finished')
+    actions = ['start_scrapping']
+    
+    def start_scrapping(self, request, queryset):
+        for obj in queryset:
+            obj.create_scrapping_task()
+    start_scrapping.short_description = 'Start scrapping tasks'
