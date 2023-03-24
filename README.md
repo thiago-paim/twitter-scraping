@@ -17,7 +17,7 @@ docker run -d -p 5672:5672 rabbitmq
 
 ## Iniciando um Celery Worker local
 ```
-celery -A twitter_scrapping worker -l INFO -f celery.log
+celery -A twitter_scrapping worker -l INFO -f celery3.log
 ```
 
 ## Iniciando um Celery Flower
@@ -39,13 +39,41 @@ Os exemplos abaixo deve ser rodados no shell do Django
 python manage.py shell
 ```
 
-## Iniciando uma task de scrapping
+## Iniciando uma task de scrapping pelo admin
+
+- Acesse `http://127.0.0.1:8000/admin/tweets/scrappingrequest/`
+- Clique em "ADD SCRAPPING REQUEST"
+- Preencha os campos "Username", "Since" e "Until"
+    - Se quiser realizar um scrapping recursivo, marque a opção "Recurse"
+- Clique em "SAVE"
+- Na tela de listagem, selecione a request que acabou de criar
+- Clique em "Action", selecione "Start scrapping tasks", e então clique em Go
+
+## Iniciando uma task de scrapping manualmente
+
+Precisamos criar um objeto `ScrappingRequest` com os parâmetros do scrapping, e então chamar o método para iniciar a task
 ```
-from tweets.tasks import scrape_tweets
-username = 'ErikakHilton'
-since = '2023-03-15'
-until = '2023-03-16'
-scrape_tweets.delay(username, since, until)
+from tweets.models import ScrappingRequest
+username = 'andreawerner_'
+since = '2022-09-01'
+until = '2022-09-02'
+req = ScrappingRequest.objects.create(
+    username=username, since=since, until=until
+)
+req.create_scrapping_task()
+```
+
+Para raspar todas as respostas e conversas derivadas dos tweets, podemos usar `recurse=True`.
+Porém este parâmetro pode aumentar significativamente o tempo de raspagem.
+```
+from tweets.models import ScrappingRequest
+username = 'andreawerner_'
+since = '2022-09-01'
+until = '2022-09-02'
+req = ScrappingRequest.objects.create(
+    username=username, since=since, until=until, recurse=True
+)
+req.create_scrapping_task()
 ```
 
 ## Raspar um único tweet e validar os dados

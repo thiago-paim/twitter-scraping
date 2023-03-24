@@ -1,8 +1,9 @@
 import traceback
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from rest_framework.serializers import ValidationError
 import snscrape.modules.twitter as sntwitter
-from .serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
+from .serializers import SnscrapeTweetSerializer
 
 logger = get_task_logger(__name__)
 
@@ -16,18 +17,28 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
-def scrape_tweets(username, since, until, recurse=False):
-    logger.info(f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse})')
-    if recurse:
+def scrape_tweets(req_id):
+    from .models import ScrappingRequest
+    req = ScrappingRequest.objects.get(id=req_id)
+    req.start()
+    
+    username = req.username
+    since = req.since.strftime('%Y-%m-%dT%H:%M:%SZ')
+    until = req.until.strftime('%Y-%m-%dT%H:%M:%SZ')
+    logger.info(
+        f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})'
+    )
+
+    if req.recurse:
         mode = sntwitter.TwitterTweetScraperMode.RECURSE
     else:
         mode = sntwitter.TwitterTweetScraperMode.SCROLL
     query = f'from:{username} since:{since} until:{until}'
-    user_scrapping_results = sntwitter.TwitterSearchScraper(query)
-
+    user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
+    
     logger.info(f'Iterando tweets do usuário "{username}"')
     tweet_ids = []
-    for tweet in user_scrapping_results.get_items():
+    for tweet in user_scrapping_results:
         tweet_ids.append(tweet.id)
     logger.info(f'Encontrados {len(tweet_ids)} tweets')
 
@@ -44,34 +55,39 @@ def scrape_tweets(username, since, until, recurse=False):
             continue
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')
-            continue
+            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')            
     logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
 
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
-    new_tweets = []
+    created_tweets = []
+    updated_tweets = []
     for tweet_data in tweets_and_replies:
         try:
-            user_serializer = SnscrapeTwitterUserSerializer(data=tweet_data.user.__dict__)
-            if not user_serializer.is_valid():
-                logger.error(f'Erro ao salvar usuario do tweet {tweet_data}: {user_serializer.errors}')
-                continue
-                
-            if not user_serializer.get_instance():
-                user_serializer.save()
+            t, created = save_scrapped_tweet(tweet_data, req_id)
+            if created:
+                created_tweets.append(t)
+            else:
+                updated_tweets.append(t)
+        
+        except ValidationError as e:
+            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}')
             
-            tweet_serializer = SnscrapeTweetSerializer(data=tweet_data.__dict__)
-            if not tweet_serializer.is_valid():
-                logger.error(f'Erro ao salvar tweet {tweet_data}: {tweet_serializer.errors}')
-                continue
-                
-            if not tweet_serializer.get_instance():
-                t = tweet_serializer.save()
-                new_tweets.append(t)
-                
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}:\n{tb}')
-            continue
+            logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
+        
+    logger.info(
+        f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):' + 
+        f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
+    )
+    req.finish()
+   
 
-    logger.info(f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={recurse}): {len(new_tweets)} novos tweets salvos')
+def save_scrapped_tweet(tweet_data, req_id):
+    tweet_data.scrapping_request = req_id
+    tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
+    if tweet_serializer.is_valid():
+        tweet, created = tweet_serializer.save()
+        return tweet, created
+    else:
+        raise ValidationError(tweet_serializer.errors)

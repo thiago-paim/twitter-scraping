@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.fields import empty
+from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
 from .models import Tweet, TwitterUser
-
 
 
 class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):
@@ -12,26 +12,27 @@ class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):
     created = serializers.DateTimeField(source='account_created_at')
     location = serializers.CharField(allow_null=True, allow_blank=True)
     followersCount = serializers.IntegerField(source='followers_count')
+    friendsCount = serializers.IntegerField(source='following_count')
+    statusesCount = serializers.IntegerField(source='tweet_count')
+    listedCount = serializers.IntegerField(source='listed_count')
     
     class Meta:
         model = TwitterUser
         fields = [
             'id', 'username', 'displayname', 'rawDescription', 'created',
-            'location', 'followersCount'
+            'location', 'followersCount', 'friendsCount', 'statusesCount',
+            'listedCount'
         ]
-        
-    def get_instance(self):
-        try:
-            instance = TwitterUser.objects.get(
-                twitter_id=self.validated_data['twitter_id']
-            )
-        except TwitterUser.DoesNotExist:
-            instance = None
-        return instance
+    
+    def __init__(self, instance=None, data=empty, **kwargs):
+        if isinstance(data, SNUser):
+            data = data.__dict__
+        super().__init__(instance, data, **kwargs)
 
         
 class SnscrapeTweetSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='twitter_id')
+    user = SnscrapeTwitterUserSerializer()
     rawContent = serializers.CharField(source='content')
     date = serializers.DateTimeField(source='published_at')
     inReplyToTweetId = serializers.CharField(source='in_reply_to_id', allow_null=True, allow_blank=True)
@@ -44,27 +45,43 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tweet
         fields = [
-            'id', 'rawContent', 'date', 'inReplyToTweetId', 'conversationId',
-            'replyCount', 'retweetCount', 'likeCount', 'quoteCount'
+            'id', 'user', 'rawContent', 'date', 'inReplyToTweetId', 'conversationId',
+            'replyCount', 'retweetCount', 'likeCount', 'quoteCount', 'scrapping_request'
         ]
     
     def __init__(self, instance=None, data=empty, **kwargs):
-        if data and data.get('user'):
-            user = data.pop('user')
-            self.user_twitter_id = user.id
+        if isinstance(data, SNTweet):
+            data.user = data.user.__dict__
+            data = data.__dict__
         super().__init__(instance, data, **kwargs)
         
-    def create(self, validated_data):
-        validated_data['user'] = TwitterUser.objects.get(
-            twitter_id=self.user_twitter_id
-        )
-        return super().create(validated_data)
-    
-    def get_instance(self):
+    def save(self, **kwargs):
         try:
-            instance = Tweet.objects.get(
+            tweet = Tweet.objects.get(
                 twitter_id=self.validated_data['twitter_id']
             )
+            self.instance = tweet
         except Tweet.DoesNotExist:
-            instance = None
-        return instance
+            pass
+        return super().save(**kwargs)
+    
+    def get_or_create_user(self, validated_data):
+        user_data = validated_data.pop('user')
+        user, created = TwitterUser.objects.update_or_create(
+            twitter_id=user_data.get('twitter_id'),
+            defaults=user_data
+        )
+        return user, created
+    
+    def create(self, validated_data):
+        user, _ = self.get_or_create_user(validated_data)
+        tweet = Tweet.objects.create(user=user, **validated_data)
+        return tweet, True
+    
+    def update(self, instance, validated_data):
+        user, _ = self.get_or_create_user(validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+            
+        return instance, False
