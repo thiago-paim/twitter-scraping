@@ -19,7 +19,6 @@ class ScrappingRequest(TimeStampedModel):
     finished = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=12, choices=TASK_STATUS_CHOICES, default='created')
     
-    # create a property to calculate the duration of the task
     @property
     def duration(self):
         if self.started and self.finished:
