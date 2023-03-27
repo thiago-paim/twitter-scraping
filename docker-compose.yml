@@ -36,7 +36,7 @@ services:
   flower:  
     container_name: flower
     image: mher/flower:0.9.5
-    command: celery flower --broker=amqp://guest:guest@rabbitmq:5672// --port=8888
+    command: celery flower
     ports:
         - 8888:8888
     env_file:
