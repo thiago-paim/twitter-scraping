@@ -1,6 +1,14 @@
 version: '3'
 
 services:
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:latest
+    ports: 
+      - 5672:5672
+      - 15672:15672
+
   django:
     container_name: django
     build: 
@@ -11,14 +19,7 @@ services:
     ports:
       - 8000:8000
     env_file:
-      - ./.env.dev
-  
-  rabbitmq:
-    container_name: rabbitmq
-    image: rabbitmq:latest
-    ports: 
-      - 5672:5672
-      - 15672:15672
+      - ./twitter_scrapping/.env
 
   celery:
     container_name: celery
@@ -28,15 +29,17 @@ services:
     volumes:
       - ./twitter_scrapping/:/usr/src/twitter_scrapping
     env_file:
-      - ./.env.dev
+      - ./twitter_scrapping/.env
     depends_on: 
       - rabbitmq
 
   flower:  
     container_name: flower
     image: mher/flower:0.9.5
-    command: celery flower
+    command: celery flower --broker=amqp://guest:guest@rabbitmq:5672// --port=8888
+    ports:
+        - 8888:8888
     env_file:
-      - ./.env.dev
+      - ./twitter_scrapping/.env
     depends_on: 
       - rabbitmq
