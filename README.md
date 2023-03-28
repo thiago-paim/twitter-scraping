@@ -7,7 +7,7 @@
 python manage.py runserver
 ```
 
-# Setup para rodar raspagem de tweets
+# Setup manual
 
 ## Iniciando Docker e Rabbit MQ
 ```
@@ -26,6 +26,17 @@ celery flower
 ```
 
 # Setup com Docker
+
+Primeiro você precisa ter o [Docker](https://docs.docker.com/engine/) instalado e rodando.
+
+Depois é só rodar:
+
+```
+docker compose build
+docker compose up
+```
+
+Acesse o admin em `http://localhost:8000/admin/`
 
 ## Abrir shell de um container
 ```
