@@ -7,7 +7,7 @@
 python manage.py runserver
 ```
 
-# Setup para rodar raspagem de tweets
+# Setup manual
 
 ## Iniciando Docker e Rabbit MQ
 ```
@@ -23,6 +23,24 @@ celery -A twitter_scrapping worker -l INFO -f celery3.log
 ## Iniciando um Celery Flower
 ```
 celery flower
+```
+
+# Setup com Docker
+
+Primeiro você precisa ter o [Docker](https://docs.docker.com/engine/) instalado e rodando.
+
+Depois é só rodar:
+
+```
+docker compose build
+docker compose up
+```
+
+Acesse o admin em `http://localhost:8000/admin/`
+
+## Abrir shell de um container
+```
+docker exec -it django /bin/bash
 ```
 
 # Exemplos de uso
@@ -71,11 +89,11 @@ req.create_scrapping_task()
 
 ## Raspar um único tweet e validar os dados
 ```
-from tweets.tasks import scrape_single_tweet
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
+from tweets.tasks import scrape_single_tweet
 
 tweet_id = '1636295637187584000'
-tweet = scrape_single_tweet(tweet_id)
+tweet = scrape_single_tweet.delay(tweet_id)
 user_serializer = SnscrapeTwitterUserSerializer(data=tweet.user.__dict__)
 if not user_serializer.is_valid():
     print(user_serializer.errors)
