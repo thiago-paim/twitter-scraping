@@ -70,8 +70,15 @@ class TwitterUserAdmin(admin.ModelAdmin):
 
 @admin.register(ScrappingRequest)
 class ScrappingRequestAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'username', 'since', 'until', 'started', 'finished')
+    list_display = ('id', 'status', 'username', 'since', 'until', 'started', 'finished', 'tweets_saved')
     actions = ['start_scrapping']
+    
+    def tweets_saved(self, obj):
+        try:
+            return Tweet.objects.filter(scrapping_request=obj).count()
+        except Exception as e:
+            return None
+    tweets_saved.short_description = 'Tweets saved'
     
     def start_scrapping(self, request, queryset):
         for obj in queryset:
