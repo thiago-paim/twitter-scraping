@@ -1,7 +1,9 @@
+import re
 from django.db import models
 from django.utils import timezone
 from django.utils.text import Truncator
 from django_extensions.db.models import TimeStampedModel
+from .words import bad_words
 
 
 class ScrappingRequest(TimeStampedModel):
@@ -66,6 +68,11 @@ class TwitterUser(TimeStampedModel):
         return self.username
 
 
+class TweetManager(models.Manager):
+    def contains_hate_words(self):
+        regex = r'\b(?:{})\b'.format('|'.join(bad_words))
+        return self.filter(content__iregex=regex)
+        
 class Tweet(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
     content = models.CharField(max_length=300)
@@ -80,6 +87,8 @@ class Tweet(TimeStampedModel):
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
     scrapping_request = models.ForeignKey(ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name='tweets')
+
+    objects = TweetManager()
 
     def __repr__(self) -> str:
         return f'<Tweet: id={self.id}, user={self.user}, content=\'{Truncator(self.content).chars(16)}\', twitter_id={self.twitter_id}>'
