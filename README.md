@@ -10,7 +10,7 @@ A aplicação pode ser rodada localmente através do Docker, ou iniciando os pro
 
 ## Rodando com Docker
 
-Primeiro certifique-se de estar com o [Docker](https://docs.docker.com/engine/) instalado e rodando.
+Primeiro certifique-se de estar com o [Docker](https://docs.docker.com/engine/) instalado e rodando. Caso esteja usando Windows, você pode usar o [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/).
 
 Crie as imagens necessárias para a aplicação com o comando:
 ```
