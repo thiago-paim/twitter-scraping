@@ -26,7 +26,16 @@ ou então, se quiser acompanhar as saídas da aplicação, use:
 docker compose up
 ```
 
-Para encerrar a aplicação:
+Por fim, você precisa criar um usuario local.
+Rode os comandos abaixo para acessar a pasta do Django e iniciar a criação do usuario
+```
+docker exec -it django /bin/bash
+python manage.py createsuperuser
+```
+Preencha os dados do usuario, e então digite `exit` para voltar a pasta do projeto
+
+
+Quando quiser encerrar a aplicação use:
 ```
 docker compose down
 ```
