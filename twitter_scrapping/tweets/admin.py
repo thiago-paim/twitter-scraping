@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Tweet, TwitterUser, ScrappingRequest
+from .utils import export_csv
 
 
 class BaseUsernameFilter(admin.SimpleListFilter):
@@ -47,6 +48,7 @@ class TweetAdmin(admin.ModelAdmin):
         ReplyToUsernameFilter, ConversationUsernameFilter,
     )
     raw_id_fields = ('user', 'in_reply_to_tweet', 'conversation_tweet', 'scrapping_request')
+    actions = ['export_tweets']
     
     def get_reply_to_user(self, obj):
         try:
@@ -62,6 +64,12 @@ class TweetAdmin(admin.ModelAdmin):
             return None
     get_conversation_user.short_description = 'Conversation User'
     
+    def export_tweets(self, request, queryset):
+        filters = request.GET.urlencode()
+        filename = f'tweets {filters}'
+        export_csv(queryset, filename)
+    export_tweets.short_description = 'Export selected tweets'
+    
     
 @admin.register(TwitterUser)
 class TwitterUserAdmin(admin.ModelAdmin):
@@ -71,7 +79,7 @@ class TwitterUserAdmin(admin.ModelAdmin):
 @admin.register(ScrappingRequest)
 class ScrappingRequestAdmin(admin.ModelAdmin):
     list_display = ('id', 'status', 'username', 'since', 'until', 'started', 'finished', 'tweets_saved')
-    actions = ['start_scrapping']
+    actions = ['start_scrapping', 'export_scrapping_results']
     
     def tweets_saved(self, obj):
         try:
@@ -84,3 +92,10 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         for obj in queryset:
             obj.create_scrapping_task()
     start_scrapping.short_description = 'Start scrapping tasks'
+    
+    def export_scrapping_results(self, request, queryset):
+        scrapping_ids = list(queryset.values_list('id', flat=True))
+        filename = f'scrapping_requests {scrapping_ids}'
+        tweets = Tweet.objects.filter(scrapping_request__in=queryset)
+        export_csv(tweets, filename)
+    export_scrapping_results.short_description = 'Export scrapping results'

@@ -3,8 +3,12 @@ from django.utils import timezone
 import pandas as pd
 
 
-def export_csv(queryset):
+def export_csv(queryset, filename=None):
+    if not filename:
+        filename = f'{queryset.model.__name__.lower()}s'
+    time_signature = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+    filepath = f'{settings.DEFAULT_EXPORT_PATH}{time_signature} {filename}.csv'
+    
     df = pd.DataFrame(tweet.as_csv_row() for tweet in queryset)
-    filepath = f'{settings.DEFAULT_EXPORT_PATH}{queryset.model.__name__.lower()}-{timezone.now()}.csv'
     df.to_csv(filepath)
 
