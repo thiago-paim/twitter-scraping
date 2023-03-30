@@ -1,66 +1,116 @@
 # twitter-scrapping
 
-# Setup geral
+Projeto para realizar scrapping de tweets abertos, com filtros por usuário e data.
 
-## Iniciando o Django
+# Setup
+
+Primeiro crie um arquivo `.env` na mesma pasta e com o mesmo conteúdo do arquivo `.env.sample`.
+
+A aplicação pode ser rodada localmente através do Docker, ou iniciando os processos manualmente
+
+## Rodando com Docker
+
+Primeiro certifique-se de estar com o [Docker](https://docs.docker.com/engine/) instalado e rodando.
+
+Crie as imagens necessárias para a aplicação com o comando:
 ```
-python manage.py runserver
+docker compose build
 ```
 
-# Setup manual
+Depois inicie aplicação com:
+```
+docker compose up -d
+```
+ou então, se quiser acompanhar as saídas da aplicação, use:
+```
+docker compose up
+```
 
-## Iniciando Docker e Rabbit MQ
+Para encerrar a aplicação:
+```
+docker compose down
+```
+
+## Rodando manualmente
+Caso não queira usar o Docker, você também pode rodar os componentes da aplicação manualmente. 
+Os passos abaixo são específicos para Linux.
+
+Primeiro vá para a pasta do `manage.py` e execute as migrações
+```
+cd twitter_scrapping/
+python manage.py migrate
+```
+
+Inicie o Rabbit MQ pelo Docker
 ```
 sudo service docker start
 docker run -d -p 5672:5672 rabbitmq
 ```
 
-## Iniciando um Celery Worker local
+Inicie o Worker Celery e o Flower
 ```
-celery -A twitter_scrapping worker -l INFO -f celery3.log
-```
-
-## Iniciando um Celery Flower
-```
+celery -A twitter_scrapping worker -l INFO -f celery.log
 celery flower
 ```
 
-# Setup com Docker
-
-Primeiro você precisa ter o [Docker](https://docs.docker.com/engine/) instalado e rodando.
-
-Depois é só rodar:
-
+Por fim inicie o Django
 ```
-docker compose build
-docker compose up
+python manage.py runserver
 ```
 
-Acesse o admin em `http://localhost:8000/admin/`
+Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplicação está funcionando
 
-## Abrir shell de um container
-```
-docker exec -it django /bin/bash
-```
+# Como usar
 
-# Exemplos de uso
+## Executando raspagens
+- Acesse `http://localhost:8000/admin/` e clique em `Scrapping Requests`, ou acesse diretamente pelo link `http://localhost:8000/admin/tweets/scrappingrequest/`
+- Clique em `ADD SCRAPPING REQUEST`, no canto superior direito
+- Preencha somente os campos `Username`, `Since` e `Until`
+    - Caso queira realizar uma raspagem recursiva, marque a opção `Recurse` (mas lembre-se que este modo é significativamente mais demorado)
+- Clique em `SAVE` para criar a solicitação de raspagem, e então você será direcionado de volta para a listagem de Scrapping Requests
+- Na tela de listagem, selecione a raspagem que acabou de criar clicando no checkbox
+- Clique em `Action` (acima da listagem), selecione a opção `Start scrapping tasks`, e então clique em `Go`
+- Com isso a raspagem será iniciada, e seu status mudará de `Created` para `Started`
+- Quando ela terminar, seu status será atualizado para `Finished`
 
-Os exemplos abaixo deve ser rodados no shell do Django
+## Exportando tweets
+
+Os tweets podem ser exportados de duas formas diferentes pelo admin: pela listagem de Tweets ou de Scrapping Requests
+
+### Exportando tweets pela listagem de Tweets
+Você pode exportar um arquivo selecionando os tweets que deseja
+
+- Vá para a listagem de Tweets (`http://localhost:8000/admin/tweets/tweet/`)
+- Se quiser, aplique algum filtro de tweet na coluna da direita
+- Selecione os tweets desejados
+    - Para selecionar todos da página, clique no checkbox do header da tabela de tweets
+    - Para selecionar todos da sua busca, clique no checkbox do header da tabela de tweets e então no texto `Select all {total} tweets`
+- Clique em `Action` (acima da listagem), selecione a opção `Export selected tweets`, e então clique em `Go`
+- O arquivo será salvo em `twitter_scrapping/exports/`
+    - O título do arquivo será formado pela data e hora da geração, seguidos do termo `tweets` e os filtros aplicados (caso haja algum)
+
+**ATENÇÃO:** Caso tenha aplicado algum filtro, é fundamental clicar para selecionar todos os tweets antes de mandar exportar, caso contrário ele gerará um arquivo com os filtros no nome, mas sem os tweets
+
+### Exportando tweets pela listagem de ScrappingRequests
+
+Você também pode exportar tweets através da raspagem que os criou
+- Vá para a listagem de Scrapping Requests (`http://localhost:8000/admin/tweets/scrappingrequest/`)
+- Selecione uma ou mais raspagens das quais deseja exportar os tweets
+- Clique em `Action` (acima da listagem), selecione a opção `Export scrapping results`, e então clique em `Go`
+- O arquivo será salvo em `twitter_scrapping/exports/`
+    - O título do arquivo será formado pela data e hora da geração, seguidos do termo `scrapping_requests` e os IDs das raspagens selecionadas
+
+**ATENÇÃO:** Atualmente cada tweet só mantém a referência para raspagem mais recente que o encontrou. Isso significa que se uma raspagem mais recente encontrar um tweet já raspado, ele perderá a referencia para a sua raspagem inicial, e por isso não será mais incluído na exportação dela.
+
+
+## Executando comandos pelo shell
+
+Também é possível realizar operações direto pelo shell do Django, que pode ser iniciado com:
 ```
 python manage.py shell
 ```
 
-## Iniciando uma task de scrapping pelo admin
-
-- Acesse `http://127.0.0.1:8000/admin/tweets/scrappingrequest/`
-- Clique em "ADD SCRAPPING REQUEST"
-- Preencha os campos "Username", "Since" e "Until"
-    - Se quiser realizar um scrapping recursivo, marque a opção "Recurse"
-- Clique em "SAVE"
-- Na tela de listagem, selecione a request que acabou de criar
-- Clique em "Action", selecione "Start scrapping tasks", e então clique em Go
-
-## Iniciando uma task de scrapping manualmente
+### Iniciando uma task de scrapping manualmente
 
 Precisamos criar um objeto `ScrappingRequest` com os parâmetros do scrapping, e então chamar o método para iniciar a task
 ```
@@ -87,7 +137,7 @@ req = ScrappingRequest.objects.create(
 req.create_scrapping_task()
 ```
 
-## Raspar um único tweet e validar os dados
+### Raspar um único tweet e validar os dados
 ```
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 from tweets.tasks import scrape_single_tweet
@@ -105,7 +155,7 @@ if not tweet_serializer.is_valid():
     print(tweet_serializer.errors)
 ```
 
-## Exportar para CSV os tweets de um usuario
+### Exportar para CSV os tweets de um usuario
 ```
 from tweets.models import Tweet, TwitterUser
 from tweets.utils import export_csv
