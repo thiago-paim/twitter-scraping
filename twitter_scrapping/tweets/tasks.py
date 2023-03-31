@@ -29,14 +29,9 @@ def scrape_tweets(req_id):
         f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})'
     )
 
-    if req.recurse:
-        mode = sntwitter.TwitterTweetScraperMode.RECURSE
-    else:
-        mode = sntwitter.TwitterTweetScraperMode.SCROLL
+    logger.info(f'Iterando tweets do usuário "{username}"')
     query = f'from:{username} since:{since} until:{until}'
     user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
-    
-    logger.info(f'Iterando tweets do usuário "{username}"')
     tweet_ids = []
     for tweet in user_scrapping_results:
         tweet_ids.append(tweet.id)
@@ -44,6 +39,10 @@ def scrape_tweets(req_id):
 
     logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
     tweets_and_replies = []
+    if req.recurse:
+        mode = sntwitter.TwitterTweetScraperMode.RECURSE
+    else:
+        mode = sntwitter.TwitterTweetScraperMode.SCROLL
     for tweet_id in tweet_ids:
         tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
         try:
@@ -55,7 +54,7 @@ def scrape_tweets(req_id):
             continue
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Erro ao raspar tweet {tweet_id}: {e}:\n{tb}')            
+            logger.error(f'Exceção ao raspar tweet {tweet_id}: {e}:\n{tb}')            
     logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
 
     logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
@@ -70,18 +69,18 @@ def scrape_tweets(req_id):
                 updated_tweets.append(t)
         
         except ValidationError as e:
-            logger.error(f'Erro ao salvar tweet {tweet_data}: {e}')
+            logger.error(f'Erro de validação ao salvar tweet {tweet_data}: {e}')
             
         except Exception as e:
             tb = traceback.format_exc()
             logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
-        
+    
+    req.finish()    
     logger.info(
         f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):' + 
         f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
     )
-    req.finish()
-   
+
 
 def save_scrapped_tweet(tweet_data, req_id):
     tweet_data.scrapping_request = req_id
