@@ -126,7 +126,7 @@ class Tweet(TimeStampedModel):
                 return tweet.user.username
         return None
 
-    def get_in_reply_to_tweet(self, scrape=False):
+    def get_in_reply_to_tweet(self):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet
         try:
@@ -135,12 +135,10 @@ class Tweet(TimeStampedModel):
             self.save()
             return tweet
         except Tweet.DoesNotExist:
-            if scrape:
-                raise NotImplementedError
-            else:
-                return None
+            # Happens when it's replying to a deleted or protected tweet
+            return None
 
-    def get_conversation_tweet(self, scrape=False):
+    def get_conversation_tweet(self):
         if self.conversation_tweet:
             return self.conversation_tweet
         try:
@@ -149,7 +147,5 @@ class Tweet(TimeStampedModel):
             self.save()
             return tweet
         except Tweet.DoesNotExist:
-            if scrape:
-                raise NotImplementedError
-            else:
-                return None
+            # Happens when the conversation started with a deleted or protected tweet            
+            return None
