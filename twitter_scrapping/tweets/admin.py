@@ -16,7 +16,7 @@ class UserUsernameFilter(BaseUsernameFilter):
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(user__username=value)
+            return queryset.filter(user__username__iexact=value)
 
 class ReplyToUsernameFilter(BaseUsernameFilter):
     title = 'Reply to username'
@@ -25,7 +25,7 @@ class ReplyToUsernameFilter(BaseUsernameFilter):
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(in_reply_to_tweet__user__username=value)
+            return queryset.filter(in_reply_to_tweet__user__username__iexact=value)
         
 class ConversationUsernameFilter(BaseUsernameFilter):
     title = 'conversation username'
@@ -34,7 +34,7 @@ class ConversationUsernameFilter(BaseUsernameFilter):
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(conversation_tweet__user__username=value)
+            return queryset.filter(conversation_tweet__user__username__iexact=value)
         
 
 @admin.register(Tweet)
