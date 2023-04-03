@@ -99,7 +99,7 @@ class Tweet(TimeStampedModel):
     def get_twitter_url(self):
         return f'https://twitter.com/{self.user.username}/status/{self.twitter_id}'
     
-    def as_csv_row(self):
+    def export(self):
         return {
             'url': self.get_twitter_url(),
             'date': self.published_at,
@@ -109,22 +109,14 @@ class Tweet(TimeStampedModel):
             'retweet_count': self.retweet_count,
             'like_count': self.like_count,
             'quote_count': self.quote_count,
-            'conversation_id': self.conversation_id,
             'in_reply_to_id': self.in_reply_to_id,
-            'in_reply_to_user': self.get_in_reply_to_user()
+            'in_reply_to_user': self.get_in_reply_to_user(),
+            'conversation_id': self.conversation_id,
+            'conversation_user': self.get_conversation_user(),
         }
     
     def is_reply(self):
         return bool(self.in_reply_to_id)
-
-    def get_in_reply_to_user(self):
-        if self.in_reply_to_tweet:
-            return self.in_reply_to_tweet.user.username
-        if self.in_reply_to_id:
-            tweet = self.get_in_reply_to_tweet()
-            if tweet:
-                return tweet.user.username
-        return None
 
     def get_in_reply_to_tweet(self):
         if self.in_reply_to_tweet:
@@ -137,6 +129,15 @@ class Tweet(TimeStampedModel):
         except Tweet.DoesNotExist:
             # Happens when it's replying to a deleted or protected tweet
             return None
+        
+    def get_in_reply_to_user(self):
+        if self.in_reply_to_tweet:
+            return self.in_reply_to_tweet.user.username
+        if self.in_reply_to_id:
+            tweet = self.get_in_reply_to_tweet()
+            if tweet:
+                return tweet.user.username
+        return None
 
     def get_conversation_tweet(self):
         if self.conversation_tweet:
@@ -149,3 +150,12 @@ class Tweet(TimeStampedModel):
         except Tweet.DoesNotExist:
             # Happens when the conversation started with a deleted or protected tweet            
             return None
+
+    def get_conversation_user(self):
+        if self.conversation_tweet:
+            return self.conversation_tweet.user.username
+        if self.conversation_id:
+            tweet = self.get_conversation_tweet()
+            if tweet:
+                return tweet.user.username
+        return None

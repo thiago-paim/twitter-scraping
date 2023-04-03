@@ -95,7 +95,7 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
     
     def export_scrapping_results(self, request, queryset):
         scrapping_ids = list(queryset.values_list('id', flat=True))
-        filename = f'scrapping_requests {scrapping_ids}'
+        filename = f'scrapping_requests id={scrapping_ids}'
         tweets = Tweet.objects.filter(scrapping_request__in=queryset)
         export_csv(tweets, filename)
     export_scrapping_results.short_description = 'Export scrapping results'
