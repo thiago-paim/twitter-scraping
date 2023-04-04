@@ -1,9 +1,10 @@
-import traceback
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from datetime import datetime
 from django.utils import timezone
 from rest_framework.serializers import ValidationError
 import snscrape.modules.twitter as sntwitter
+import traceback
 
 from .serializers import SnscrapeTweetSerializer
 
@@ -20,8 +21,8 @@ def scrape_single_tweet(tweet_id):
 
 @shared_task
 def scrape_tweets(req_id):
-    started_at = timezone.now()
     from .models import ScrappingRequest
+    started_at = timezone.now()
     req = ScrappingRequest.objects.get(id=req_id)
     req.start()
     
@@ -99,3 +100,29 @@ def save_scrapped_tweet(tweet_data, req_id):
         return tweet, created
     else:
         raise ValidationError(tweet_serializer.errors)
+
+
+
+
+
+def create_scrapping_requests():
+    from .models import ScrappingRequest
+    from .values import ELECTED_SP_STATE_DEP, NON_ELECTED_SP_STATE_DEP, SCRAPPING_PERIODS
+    
+    if ScrappingRequest.objects.filter(status='started').exists():
+        return  # Por enquanto vamos evitar scrappings simultaneos
+    
+    for period in SCRAPPING_PERIODS:
+        since = timezone.make_aware(datetime.strptime(period['since'], '%Y-%m-%d'))
+        until = timezone.make_aware(datetime.strptime(period['until'], '%Y-%m-%d'))
+        for dep in ELECTED_SP_STATE_DEP:
+            if not ScrappingRequest.objects.filter(
+                username=dep, since=since, until=until
+            ).exists():
+                req = ScrappingRequest.objects.create(
+                    username=dep, since=since, until=until
+                )
+                req.save()
+                # req.create_scrapping_task()
+                logger.info(f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})")
+                return
