@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import Truncator
 from django_extensions.db.models import TimeStampedModel
-from .words import bad_words
+from .values import BAD_WORDS
 
 
 class ScrappingRequest(TimeStampedModel):
@@ -70,7 +70,7 @@ class TwitterUser(TimeStampedModel):
 
 class TweetManager(models.Manager):
     def contains_hate_words(self):
-        regex = r'\b(?:{})\b'.format('|'.join(bad_words))
+        regex = r'\b(?:{})\b'.format('|'.join(BAD_WORDS))
         return self.filter(content__iregex=regex)
         
 class Tweet(TimeStampedModel):

@@ -2,6 +2,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from datetime import datetime
 from django.utils import timezone
+from django.conf import settings
 from rest_framework.serializers import ValidationError
 import snscrape.modules.twitter as sntwitter
 import traceback
@@ -105,17 +106,17 @@ def save_scrapped_tweet(tweet_data, req_id):
 @shared_task
 def create_next_scrapping_request():
     from .models import ScrappingRequest
-    from .values import ELECTED_SP_STATE_DEP, NON_ELECTED_SP_STATE_DEP, SCRAPPING_PERIODS
+    from .values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
     
-    if ScrappingRequest.objects.filter(status='started').exists():
-        logger.info(f"ScrappingRequest já em andamento")
-        return  # Por enquanto vamos evitar scrappings simultaneos
+    if ScrappingRequest.objects.filter(status='started').count() >= settings.MAX_SCRAPPINGS:
+        logger.info(f"Limite de ScrappingRequests simultaneos atingido ({settings.MAX_SCRAPPINGS})")
+        return
     
     for period in SCRAPPING_PERIODS:
         since = timezone.make_aware(datetime.strptime(period['since'], '%Y-%m-%d'))
         until = timezone.make_aware(datetime.strptime(period['until'], '%Y-%m-%d'))
-        deputies = ELECTED_SP_STATE_DEP + NON_ELECTED_SP_STATE_DEP
-        for dep in deputies:
+
+        for dep in TOTAL_SP_STATE_DEP:
             if not ScrappingRequest.objects.filter(
                 username=dep, since=since, until=until
             ).exists():
