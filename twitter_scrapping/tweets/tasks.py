@@ -88,7 +88,7 @@ def scrape_tweets(req_id):
         f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
     )
     logger.info(
-        f'Tempo total={finished_at - started_at}; Tempo de scrapping={started_scrapping_at - started_saving_at}; Tempo de gravação={finished_at - started_saving_at}'
+        f'Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}'
     )
 
 
@@ -102,20 +102,20 @@ def save_scrapped_tweet(tweet_data, req_id):
         raise ValidationError(tweet_serializer.errors)
 
 
-
-
-
-def create_scrapping_requests():
+@shared_task
+def create_next_scrapping_request():
     from .models import ScrappingRequest
     from .values import ELECTED_SP_STATE_DEP, NON_ELECTED_SP_STATE_DEP, SCRAPPING_PERIODS
     
     if ScrappingRequest.objects.filter(status='started').exists():
+        logger.info(f"ScrappingRequest já em andamento")
         return  # Por enquanto vamos evitar scrappings simultaneos
     
     for period in SCRAPPING_PERIODS:
         since = timezone.make_aware(datetime.strptime(period['since'], '%Y-%m-%d'))
         until = timezone.make_aware(datetime.strptime(period['until'], '%Y-%m-%d'))
-        for dep in ELECTED_SP_STATE_DEP:
+        deputies = ELECTED_SP_STATE_DEP + NON_ELECTED_SP_STATE_DEP
+        for dep in deputies:
             if not ScrappingRequest.objects.filter(
                 username=dep, since=since, until=until
             ).exists():
@@ -123,6 +123,6 @@ def create_scrapping_requests():
                     username=dep, since=since, until=until
                 )
                 req.save()
-                # req.create_scrapping_task()
+                req.create_scrapping_task()
                 logger.info(f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})")
                 return
