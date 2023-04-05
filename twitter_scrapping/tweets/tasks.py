@@ -1,9 +1,11 @@
-import traceback
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from datetime import datetime
 from django.utils import timezone
+from django.conf import settings
 from rest_framework.serializers import ValidationError
 import snscrape.modules.twitter as sntwitter
+import traceback
 
 from .serializers import SnscrapeTweetSerializer
 
@@ -20,8 +22,8 @@ def scrape_single_tweet(tweet_id):
 
 @shared_task
 def scrape_tweets(req_id):
-    started_at = timezone.now()
     from .models import ScrappingRequest
+    started_at = timezone.now()
     req = ScrappingRequest.objects.get(id=req_id)
     req.start()
     
@@ -87,7 +89,7 @@ def scrape_tweets(req_id):
         f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
     )
     logger.info(
-        f'Tempo total={finished_at - started_at}; Tempo de scrapping={started_scrapping_at - started_saving_at}; Tempo de gravação={finished_at - started_saving_at}'
+        f'Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}'
     )
 
 
@@ -99,3 +101,29 @@ def save_scrapped_tweet(tweet_data, req_id):
         return tweet, created
     else:
         raise ValidationError(tweet_serializer.errors)
+
+
+@shared_task
+def create_next_scrapping_request():
+    from .models import ScrappingRequest
+    from .values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+    
+    if ScrappingRequest.objects.filter(status='started').count() >= settings.MAX_SCRAPPINGS:
+        logger.info(f"Limite de ScrappingRequests simultaneos atingido ({settings.MAX_SCRAPPINGS})")
+        return
+    
+    for period in SCRAPPING_PERIODS:
+        since = timezone.make_aware(datetime.strptime(period['since'], '%Y-%m-%d'))
+        until = timezone.make_aware(datetime.strptime(period['until'], '%Y-%m-%d'))
+
+        for dep in TOTAL_SP_STATE_DEP:
+            if not ScrappingRequest.objects.filter(
+                username=dep, since=since, until=until
+            ).exists():
+                req = ScrappingRequest.objects.create(
+                    username=dep, since=since, until=until
+                )
+                req.save()
+                req.create_scrapping_task()
+                logger.info(f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})")
+                return

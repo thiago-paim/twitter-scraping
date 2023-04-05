@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 
 import environ
 import os
+from celery.schedules import crontab
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -133,3 +134,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_EXPORT_PATH = f'{BASE_DIR}/exports/'
 
 CELERY_BROKER_URL=env("CELERY_BROKER_URL")
+
+CELERY_BEAT_SCHEDULE = {
+    "create_next_scrapping_request": {
+        "task": "tweets.tasks.create_next_scrapping_request",
+        "schedule": crontab(minute='*/2'),
+    },
+}
+
+MAX_SCRAPPINGS = 4
