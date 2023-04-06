@@ -23,25 +23,26 @@ def scrape_single_tweet(tweet_id):
 @shared_task
 def scrape_tweets(req_id):
     from .models import ScrappingRequest
+
     started_at = timezone.now()
     req = ScrappingRequest.objects.get(id=req_id)
     req.start()
-    
+
     username = req.username
-    since = req.since.strftime('%Y-%m-%dT%H:%M:%SZ')
-    until = req.until.strftime('%Y-%m-%dT%H:%M:%SZ')
+    since = req.since.strftime("%Y-%m-%dT%H:%M:%SZ")
+    until = req.until.strftime("%Y-%m-%dT%H:%M:%SZ")
     logger.info(
-        f'Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})'
+        f"Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})"
     )
 
     started_scrapping_at = timezone.now()
-    query = f'from:{username} since:{since} until:{until}'
+    query = f"from:{username} since:{since} until:{until}"
     user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
     tweet_ids = []
     logger.info(f'Contando tweets do usuário "{username}"')
     for tweet in user_scrapping_results:
         tweet_ids.append(tweet.id)
-    logger.info(f'Encontrados {len(tweet_ids)} tweets')
+    logger.info(f"Encontrados {len(tweet_ids)} tweets")
 
     logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
     tweets_and_replies = []
@@ -60,11 +61,11 @@ def scrape_tweets(req_id):
             continue
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Exceção ao raspar tweet {tweet_id}: {e}:\n{tb}')            
-    logger.info(f'Encontrados {len(tweets_and_replies)} tweets')
+            logger.error(f"Exceção ao raspar tweet {tweet_id}: {e}:\n{tb}")
+    logger.info(f"Encontrados {len(tweets_and_replies)} tweets")
 
     started_saving_at = timezone.now()
-    logger.info(f'Iniciando gravacao de {len(tweets_and_replies)} tweets')
+    logger.info(f"Iniciando gravacao de {len(tweets_and_replies)} tweets")
     created_tweets = []
     updated_tweets = []
     for tweet_data in tweets_and_replies:
@@ -74,22 +75,22 @@ def scrape_tweets(req_id):
                 created_tweets.append(t)
             else:
                 updated_tweets.append(t)
-        
+
         except ValidationError as e:
-            logger.error(f'Erro de validação ao salvar tweet {tweet_data}: {e}')
-            
+            logger.error(f"Erro de validação ao salvar tweet {tweet_data}: {e}")
+
         except Exception as e:
             tb = traceback.format_exc()
-            logger.error(f'Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}')
-    
+            logger.error(f"Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}")
+
     req.finish()
     finished_at = timezone.now()
     logger.info(
-        f'Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):' + 
-        f'{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados'
+        f"Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):"
+        + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
     )
     logger.info(
-        f'Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}'
+        f"Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}"
     )
 
 
@@ -107,14 +108,19 @@ def save_scrapped_tweet(tweet_data, req_id):
 def create_next_scrapping_request():
     from .models import ScrappingRequest
     from .values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
-    
-    if ScrappingRequest.objects.filter(status='started').count() >= settings.MAX_SCRAPPINGS:
-        logger.info(f"Limite de ScrappingRequests simultaneos atingido ({settings.MAX_SCRAPPINGS})")
+
+    if (
+        ScrappingRequest.objects.filter(status="started").count()
+        >= settings.MAX_SCRAPPINGS
+    ):
+        logger.info(
+            f"Limite de ScrappingRequests simultaneos atingido ({settings.MAX_SCRAPPINGS})"
+        )
         return
-    
+
     for period in SCRAPPING_PERIODS:
-        since = timezone.make_aware(datetime.strptime(period['since'], '%Y-%m-%d'))
-        until = timezone.make_aware(datetime.strptime(period['until'], '%Y-%m-%d'))
+        since = timezone.make_aware(datetime.strptime(period["since"], "%Y-%m-%d"))
+        until = timezone.make_aware(datetime.strptime(period["until"], "%Y-%m-%d"))
 
         for dep in TOTAL_SP_STATE_DEP:
             if not ScrappingRequest.objects.filter(
@@ -125,5 +131,7 @@ def create_next_scrapping_request():
                 )
                 req.save()
                 req.create_scrapping_task()
-                logger.info(f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})")
+                logger.info(
+                    f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})"
+                )
                 return

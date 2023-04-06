@@ -19,7 +19,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-env.read_env(Path(str(BASE_DIR)).joinpath('.env'))
+env.read_env(Path(str(BASE_DIR)).joinpath(".env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -131,14 +131,14 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-DEFAULT_EXPORT_PATH = f'{BASE_DIR}/exports/'
+DEFAULT_EXPORT_PATH = f"{BASE_DIR}/exports/"
 
-CELERY_BROKER_URL=env("CELERY_BROKER_URL")
+CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
 CELERY_BEAT_SCHEDULE = {
     "create_next_scrapping_request": {
         "task": "tweets.tasks.create_next_scrapping_request",
-        "schedule": crontab(minute='*/2'),
+        "schedule": crontab(minute="*/2"),
     },
 }
 

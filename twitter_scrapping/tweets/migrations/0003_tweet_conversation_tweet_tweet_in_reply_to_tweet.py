@@ -5,7 +5,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tweets", "0002_rename_in_reply_to_tweet_conversation_id_and_more"),
     ]

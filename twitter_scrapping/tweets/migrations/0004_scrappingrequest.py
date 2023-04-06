@@ -5,7 +5,6 @@ import django_extensions.db.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tweets", "0003_tweet_conversation_tweet_tweet_in_reply_to_tweet"),
     ]

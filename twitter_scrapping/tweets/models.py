@@ -8,10 +8,10 @@ from .values import BAD_WORDS
 
 class ScrappingRequest(TimeStampedModel):
     TASK_STATUS_CHOICES = [
-        ('created', 'Created'),
-        ('started', 'Started'),
-        ('finished', 'Finished'),
-        ('interrupted', 'Interrupted'),
+        ("created", "Created"),
+        ("started", "Started"),
+        ("finished", "Finished"),
+        ("interrupted", "Interrupted"),
     ]
     username = models.CharField(max_length=50, null=True, blank=True)
     since = models.DateTimeField(null=True, blank=True)
@@ -19,32 +19,35 @@ class ScrappingRequest(TimeStampedModel):
     recurse = models.BooleanField(default=False)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=12, choices=TASK_STATUS_CHOICES, default='created')
-    
+    status = models.CharField(
+        max_length=12, choices=TASK_STATUS_CHOICES, default="created"
+    )
+
     @property
     def duration(self):
         if self.started and self.finished:
             return self.finished - self.started
         return None
-    
+
     def create_scrapping_task(self):
         from .tasks import scrape_tweets
-        if self.status != 'created':
+
+        if self.status != "created":
             return
         scrape_tweets.delay(self.id)
-        
+
     def start(self):
-        self.status = 'started'
+        self.status = "started"
         self.started = timezone.now()
         self.save()
-        
+
     def finish(self):
-        self.status = 'finished'
+        self.status = "finished"
         self.finished = timezone.now()
         self.save()
 
     def interrupt(self):
-        self.status = 'interrupted'
+        self.status = "interrupted"
         self.finished = timezone.now()
         self.save()
 
@@ -54,67 +57,79 @@ class TwitterUser(TimeStampedModel):
     username = models.CharField(max_length=50)
     display_name = models.CharField(max_length=50)
     description = models.CharField(max_length=300)
-    account_created_at = models.DateTimeField('Twitter account creation date')
+    account_created_at = models.DateTimeField("Twitter account creation date")
     location = models.CharField(max_length=50, blank=True)
     followers_count = models.IntegerField(default=0)
     following_count = models.IntegerField(default=0)
     tweet_count = models.IntegerField(default=0)
     listed_count = models.IntegerField(default=0)
-    
+
     def __repr__(self) -> str:
-        return f'<TwitterUser: id={self.id}, username={self.username}, twitter_id={self.twitter_id}>'
-    
+        return f"<TwitterUser: id={self.id}, username={self.username}, twitter_id={self.twitter_id}>"
+
     def __str__(self) -> str:
         return self.username
 
 
 class TweetManager(models.Manager):
     def contains_hate_words(self):
-        regex = r'\b(?:{})\b'.format('|'.join(BAD_WORDS))
+        regex = r"\b(?:{})\b".format("|".join(BAD_WORDS))
         return self.filter(content__iregex=regex)
-        
+
+
 class Tweet(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
     content = models.CharField(max_length=300)
-    published_at = models.DateTimeField('tweet publish date')
+    published_at = models.DateTimeField("tweet publish date")
     in_reply_to_id = models.CharField(max_length=30, null=True, blank=True)
-    in_reply_to_tweet = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='tweet_replies_set')
+    in_reply_to_tweet = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, related_name="tweet_replies_set"
+    )
     conversation_id = models.CharField(max_length=30, null=True, blank=True)
-    conversation_tweet = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='conversation_tweets_set')
-    user = models.ForeignKey(TwitterUser, on_delete=models.CASCADE, related_name='tweet_user')
+    conversation_tweet = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="conversation_tweets_set",
+    )
+    user = models.ForeignKey(
+        TwitterUser, on_delete=models.CASCADE, related_name="tweet_user"
+    )
     reply_count = models.IntegerField(default=0)
     retweet_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
-    scrapping_request = models.ForeignKey(ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name='tweets')
+    scrapping_request = models.ForeignKey(
+        ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
+    )
 
     objects = TweetManager()
 
     def __repr__(self) -> str:
-        return f'<Tweet: id={self.id}, user={self.user}, content=\'{Truncator(self.content).chars(16)}\', twitter_id={self.twitter_id}>'
-    
+        return f"<Tweet: id={self.id}, user={self.user}, content='{Truncator(self.content).chars(16)}', twitter_id={self.twitter_id}>"
+
     def __str__(self) -> str:
         return Truncator(self.content).chars(16)
-    
+
     def get_twitter_url(self):
-        return f'https://twitter.com/{self.user.username}/status/{self.twitter_id}'
-    
+        return f"https://twitter.com/{self.user.username}/status/{self.twitter_id}"
+
     def export(self):
         return {
-            'url': self.get_twitter_url(),
-            'date': self.published_at,
-            'content': self.content,
-            'user': self.user.username,
-            'reply_count': self.reply_count,
-            'retweet_count': self.retweet_count,
-            'like_count': self.like_count,
-            'quote_count': self.quote_count,
-            'in_reply_to_id': self.in_reply_to_id,
-            'in_reply_to_user': self.get_in_reply_to_user(),
-            'conversation_id': self.conversation_id,
-            'conversation_user': self.get_conversation_user(),
+            "url": self.get_twitter_url(),
+            "date": self.published_at,
+            "content": self.content,
+            "user": self.user.username,
+            "reply_count": self.reply_count,
+            "retweet_count": self.retweet_count,
+            "like_count": self.like_count,
+            "quote_count": self.quote_count,
+            "in_reply_to_id": self.in_reply_to_id,
+            "in_reply_to_user": self.get_in_reply_to_user(),
+            "conversation_id": self.conversation_id,
+            "conversation_user": self.get_conversation_user(),
         }
-    
+
     def is_reply(self):
         return bool(self.in_reply_to_id)
 
@@ -129,7 +144,7 @@ class Tweet(TimeStampedModel):
         except Tweet.DoesNotExist:
             # Happens when it's replying to a deleted or protected tweet
             return None
-        
+
     def get_in_reply_to_user(self):
         if self.in_reply_to_tweet:
             return self.in_reply_to_tweet.user.username
@@ -148,7 +163,7 @@ class Tweet(TimeStampedModel):
             self.save()
             return tweet
         except Tweet.DoesNotExist:
-            # Happens when the conversation started with a deleted or protected tweet            
+            # Happens when the conversation started with a deleted or protected tweet
             return None
 
     def get_conversation_user(self):
