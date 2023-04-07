@@ -28,12 +28,11 @@ env.read_env(Path(str(BASE_DIR)).joinpath(".env"))
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DEBUG = env("DEBUG") in ["True", "1"]
 
 # 'DJANGO_ALLOWED_HOSTS' should be a single string of hosts with a space between each.
 # For example: 'DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]'
-# ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS").split(" ")
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS").split(" ")
 
 # Application definition
 
@@ -133,6 +132,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_EXPORT_PATH = f"{BASE_DIR}/exports/"
 
+
+# Celery Settings
+
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
 CELERY_BEAT_SCHEDULE = {
@@ -142,4 +144,6 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+
+# Scrapping Settings
 MAX_SCRAPPINGS = 4
