@@ -105,33 +105,44 @@ def save_scrapped_tweet(tweet_data, req_id):
 
 
 @shared_task
-def create_next_scrapping_request():
+def create_scrapping_requests(usernames, periods):
     from .models import ScrappingRequest
-    from .values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
 
-    if (
-        ScrappingRequest.objects.filter(status="started").count()
-        >= settings.MAX_SCRAPPINGS
-    ):
-        logger.info(
-            f"Limite de ScrappingRequests simultaneos atingido ({settings.MAX_SCRAPPINGS})"
-        )
-        return
-
-    for period in SCRAPPING_PERIODS:
+    created_requests = []
+    for period in periods:
         since = timezone.make_aware(datetime.strptime(period["since"], "%Y-%m-%d"))
         until = timezone.make_aware(datetime.strptime(period["until"], "%Y-%m-%d"))
 
-        for dep in TOTAL_SP_STATE_DEP:
+        for username in usernames:
             if not ScrappingRequest.objects.filter(
-                username=dep, since=since, until=until
+                username=username, since=since, until=until
             ).exists():
                 req = ScrappingRequest.objects.create(
-                    username=dep, since=since, until=until
+                    username=username, since=since, until=until
                 )
                 req.save()
-                req.create_scrapping_task()
+                created_requests.append(req)
                 logger.info(
-                    f"Criando ScrappingRequest(username={dep}, since={period['since']}, until={period['until']})"
+                    f"Criando ScrappingRequest(username={username}, since={period['since']}, until={period['until']})"
                 )
-                return
+
+    logger.info(f"Criados {len(created_requests)} ScrappingRequest's")
+    return created_requests
+
+
+@shared_task
+def start_next_scrapping_request():
+    from .models import ScrappingRequest
+
+    running_requests_count = ScrappingRequest.objects.filter(status="started").count()
+    if running_requests_count >= settings.MAX_SCRAPPINGS:
+        return
+
+    requests = list(ScrappingRequest.objects.filter(status="created"))
+    while requests and running_requests_count < settings.MAX_SCRAPPINGS:
+        req = requests.pop(0)
+        req.create_scrapping_task()
+        logger.info(
+            f"Iniciando ScrappingRequest(username={req.username}, since={req.since}, until={req.until})"
+        )
+        running_requests_count += 1
