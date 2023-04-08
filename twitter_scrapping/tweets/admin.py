@@ -108,6 +108,10 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "finished",
         "tweets_saved",
     )
+    list_filter = (
+        "created",
+        "status",
+    )
     actions = ["start_scrapping", "export_scrapping_results"]
 
     def tweets_saved(self, obj):
