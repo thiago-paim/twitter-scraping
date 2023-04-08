@@ -22,76 +22,83 @@ def scrape_single_tweet(tweet_id):
 
 @shared_task
 def scrape_tweets(req_id):
-    from .models import ScrappingRequest
+    try:
+        from .models import ScrappingRequest
 
-    started_at = timezone.now()
-    req = ScrappingRequest.objects.get(id=req_id)
-    req.start()
+        started_at = timezone.now()
+        req = ScrappingRequest.objects.get(id=req_id)
+        req.start()
 
-    username = req.username
-    since = req.since.strftime("%Y-%m-%dT%H:%M:%SZ")
-    until = req.until.strftime("%Y-%m-%dT%H:%M:%SZ")
-    logger.info(
-        f"Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})"
-    )
+        username = req.username
+        since = req.since.strftime("%Y-%m-%dT%H:%M:%SZ")
+        until = req.until.strftime("%Y-%m-%dT%H:%M:%SZ")
+        logger.info(
+            f"Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})"
+        )
 
-    started_scrapping_at = timezone.now()
-    query = f"from:{username} since:{since} until:{until}"
-    user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
-    tweet_ids = []
-    logger.info(f'Contando tweets do usuário "{username}"')
-    for tweet in user_scrapping_results:
-        tweet_ids.append(tweet.id)
-    logger.info(f"Encontrados {len(tweet_ids)} tweets")
+        started_scrapping_at = timezone.now()
+        query = f"from:{username} since:{since} until:{until}"
+        user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
+        tweet_ids = []
+        logger.info(f'Contando tweets do usuário "{username}"')
+        for tweet in user_scrapping_results:
+            tweet_ids.append(tweet.id)
+        logger.info(f"Encontrados {len(tweet_ids)} tweets")
 
-    logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
-    tweets_and_replies = []
-    if req.recurse:
-        mode = sntwitter.TwitterTweetScraperMode.RECURSE
-    else:
-        mode = sntwitter.TwitterTweetScraperMode.SCROLL
-    for tweet_id in tweet_ids:
-        tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
-        try:
-            # Loop manual necessário para que erros em tweets pontuais não travem o generator
-            while True:
-                tweet = next(tweet_scrapper)
-                tweets_and_replies.append(tweet)
-        except StopIteration:
-            continue
-        except Exception as e:
-            tb = traceback.format_exc()
-            logger.error(f"Exceção ao raspar tweet {tweet_id}: {e}:\n{tb}")
-    logger.info(f"Encontrados {len(tweets_and_replies)} tweets")
+        logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
+        tweets_and_replies = []
+        if req.recurse:
+            mode = sntwitter.TwitterTweetScraperMode.RECURSE
+        else:
+            mode = sntwitter.TwitterTweetScraperMode.SCROLL
+        for tweet_id in tweet_ids:
+            tweet_scrapper = sntwitter.TwitterTweetScraper(
+                tweet_id, mode=mode
+            ).get_items()
+            try:
+                # Loop manual necessário para que erros em tweets pontuais não travem o generator
+                while True:
+                    tweet = next(tweet_scrapper)
+                    tweets_and_replies.append(tweet)
+            except StopIteration:
+                continue
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(f"Exceção ao raspar tweet {tweet_id}: {e}:\n{tb}")
+        logger.info(f"Encontrados {len(tweets_and_replies)} tweets")
 
-    started_saving_at = timezone.now()
-    logger.info(f"Iniciando gravacao de {len(tweets_and_replies)} tweets")
-    created_tweets = []
-    updated_tweets = []
-    for tweet_data in tweets_and_replies:
-        try:
-            t, created = save_scrapped_tweet(tweet_data, req_id)
-            if created:
-                created_tweets.append(t)
-            else:
-                updated_tweets.append(t)
+        started_saving_at = timezone.now()
+        logger.info(f"Iniciando gravacao de {len(tweets_and_replies)} tweets")
+        created_tweets = []
+        updated_tweets = []
+        for tweet_data in tweets_and_replies:
+            try:
+                t, created = save_scrapped_tweet(tweet_data, req_id)
+                if created:
+                    created_tweets.append(t)
+                else:
+                    updated_tweets.append(t)
 
-        except ValidationError as e:
-            logger.error(f"Erro de validação ao salvar tweet {tweet_data}: {e}")
+            except ValidationError as e:
+                logger.error(f"Erro de validação ao salvar tweet {tweet_data}: {e}")
 
-        except Exception as e:
-            tb = traceback.format_exc()
-            logger.error(f"Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}")
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(f"Exceção ao salvar tweet {tweet_data}: {e}:\n{tb}")
 
-    req.finish()
-    finished_at = timezone.now()
-    logger.info(
-        f"Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):"
-        + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
-    )
-    logger.info(
-        f"Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}"
-    )
+        req.finish()
+        finished_at = timezone.now()
+        logger.info(
+            f"Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):"
+            + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
+        )
+        logger.info(
+            f"Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}"
+        )
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"Exceção ao executar scrape_tweets(req_id={req_id}): {e}:\n{tb}")
+        req.finish()
 
 
 def save_scrapped_tweet(tweet_data, req_id):
