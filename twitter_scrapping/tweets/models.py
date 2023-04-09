@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from django.db import models
 from django.utils import timezone
 from django.utils.text import Truncator
@@ -75,6 +76,23 @@ class TweetManager(models.Manager):
     def contains_hate_words(self):
         regex = r"\b(?:{})\b".format("|".join(BAD_WORDS))
         return self.filter(content__iregex=regex)
+
+    def politician_tweets(self):
+        from django.db.models import Q
+        from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+
+        or_conditions = Q()
+        for dep in TOTAL_SP_STATE_DEP:
+            or_conditions.add(Q(conversation_tweet__user__username__iexact=dep), Q.OR)
+
+        since = min([period["since"] for period in SCRAPPING_PERIODS])
+        until = max([period["until"] for period in SCRAPPING_PERIODS])
+        since = timezone.make_aware(datetime.strptime(since, "%Y-%m-%d"))
+        until = timezone.make_aware(datetime.strptime(until, "%Y-%m-%d"))
+
+        return self.filter(published_at__gte=since, published_at__lte=until).filter(
+            or_conditions
+        )
 
 
 class Tweet(TimeStampedModel):
