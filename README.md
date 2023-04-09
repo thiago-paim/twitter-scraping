@@ -173,3 +173,11 @@ user = TwitterUser.objects.last()
 tweets = Tweet.objects.filter(user=user)
 export_csv(tweets)
 ```
+
+### Criando scraping requests para um conjunto de usuarios e periodos 
+```
+from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+from tweets.tasks import create_scrapping_requests
+
+create_scrapping_requests(TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS)
+```
