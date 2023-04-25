@@ -21,7 +21,7 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
-def scrape_tweets(req_id):
+def scrape_tweets_and_replies(req_id):
     try:
         from .models import ScrappingRequest
 
@@ -33,7 +33,7 @@ def scrape_tweets(req_id):
         since = req.since.strftime("%Y-%m-%dT%H:%M:%SZ")
         until = req.until.strftime("%Y-%m-%dT%H:%M:%SZ")
         logger.info(
-            f"Iniciando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse})"
+            f"Iniciando scrape_tweets_and_replies(username={username}, since={since}, until={until}, recurse={req.recurse})"
         )
 
         started_scrapping_at = timezone.now()
@@ -89,7 +89,7 @@ def scrape_tweets(req_id):
         req.finish()
         finished_at = timezone.now()
         logger.info(
-            f"Finalizando scrape_tweets(username={username}, since={since}, until={until}, recurse={req.recurse}):"
+            f"Finalizando scrape_tweets_and_replies(username={username}, since={since}, until={until}, recurse={req.recurse}):"
             + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
         )
         logger.info(
@@ -97,7 +97,9 @@ def scrape_tweets(req_id):
         )
     except Exception as e:
         tb = traceback.format_exc()
-        logger.error(f"Exceção ao executar scrape_tweets(req_id={req_id}): {e}:\n{tb}")
+        logger.error(
+            f"Exceção ao executar scrape_tweets_and_replies(req_id={req_id}): {e}:\n{tb}"
+        )
         req.finish()
 
 

@@ -11,7 +11,7 @@ from tweets.tests.fixtures import (
     tweet1_updated_both,
     tweet1_incomplete,
 )
-from tweets.tasks import save_scrapped_tweet, scrape_tweets
+from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies
 
 tz = timezone.get_default_timezone()
 
@@ -43,11 +43,11 @@ class TasksTest(TestCase):
     @patch("snscrape.modules.twitter.TwitterSearchScraper.get_items")
     @patch("snscrape.modules.twitter.TwitterTweetScraper.get_items")
     @patch("tweets.tasks.save_scrapped_tweet")
-    def test_scrape_tweets(
+    def test_scrape_tweets_and_replies(
         self, save_scrapped_tweet_mock, tweet_scrapper_mock, search_scrapper_mock
     ):
         search_scrapper_mock.side_effect = [[self.tweet1].__iter__()]
         tweet_scrapper_mock.side_effect = [[self.tweet1].__iter__()]
 
-        scrape_tweets(self.req.id)
+        scrape_tweets_and_replies(self.req.id)
         save_scrapped_tweet_mock.assert_called_with(self.tweet1, self.req.id)

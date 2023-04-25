@@ -32,11 +32,11 @@ class ScrappingRequest(TimeStampedModel):
         return None
 
     def create_scrapping_task(self):
-        from .tasks import scrape_tweets
+        from .tasks import scrape_tweets_and_replies
 
         if self.status != "created":
             return
-        scrape_tweets.delay(self.id)
+        scrape_tweets_and_replies.delay(self.id)
 
     def start(self):
         self.status = "started"
