@@ -106,11 +106,13 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "until",
         "started",
         "finished",
+        "include_replies",
         "tweets_saved",
     )
     list_filter = (
         "created",
         "status",
+        "include_replies",
     )
     actions = ["start_scrapping", "export_scrapping_results"]
 

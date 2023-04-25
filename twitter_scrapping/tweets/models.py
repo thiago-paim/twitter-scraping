@@ -18,6 +18,7 @@ class ScrappingRequest(TimeStampedModel):
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
     recurse = models.BooleanField(default=False)
+    include_replies = models.BooleanField(default=True)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
