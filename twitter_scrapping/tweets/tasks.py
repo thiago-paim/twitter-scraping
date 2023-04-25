@@ -21,6 +21,63 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
+def scrape_tweets_from_user(req_id):
+    try:
+        from .models import ScrappingRequest
+
+        started_at = timezone.now()
+        req = ScrappingRequest.objects.get(id=req_id)
+        req.start()
+
+        username = req.username
+        logger.info(
+            f"Iniciando scrape_tweets_from_user(username={username}, since={req.since}, until={req.until})"
+        )
+
+        tweets = []
+        created_tweets = []
+        updated_tweets = []
+        PINNED_TWEETS_BUFFER = (
+            5  # É comum que usuários tenham 1 ou 2 tweets fixados no topo do perfil
+        )
+        user_scrapping_results = sntwitter.TwitterProfileScraper(username).get_items()
+
+        for tweet in user_scrapping_results:
+            if tweet.date < req.since and len(tweets) > PINNED_TWEETS_BUFFER:
+                logger.info(f"Limite de raspagem atingido em {tweet.date}")
+                break
+            try:
+                tweets.append(tweet)
+                t, created = save_scrapped_tweet(tweet, req_id)
+                if created:
+                    created_tweets.append(t)
+                else:
+                    updated_tweets.append(t)
+            except ValidationError as e:
+                logger.error(f"Erro de validação ao salvar tweet {tweet}: {e}")
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(f"Exceção ao salvar tweet {tweet}: {e}:\n{tb}")
+
+        logger.info(f"Encontrados {len(tweets)} tweets")
+
+        req.finish()
+        finished_at = timezone.now()
+        logger.info(
+            f"Finalizando scrape_tweets_from_user(username={username}, since={req.since}, until={req.until}):"
+            + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
+        )
+        logger.info(f"Tempo total={finished_at - started_at}")
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(
+            f"Exceção ao executar scrape_tweets_from_user(req_id={req_id}): {e}:\n{tb}"
+        )
+        req.finish()
+
+
+@shared_task
 def scrape_tweets_and_replies(req_id):
     try:
         from .models import ScrappingRequest
