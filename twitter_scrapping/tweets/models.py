@@ -110,13 +110,18 @@ class Tweet(TimeStampedModel):
     published_at = models.DateTimeField("tweet publish date")
     in_reply_to_id = models.CharField(max_length=30, null=True, blank=True)
     in_reply_to_tweet = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, null=True, related_name="tweet_replies_set"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tweet_replies_set",
     )
     conversation_id = models.CharField(max_length=30, null=True, blank=True)
     conversation_tweet = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name="conversation_tweets_set",
     )
     retweeted_tweet_id = models.CharField(max_length=30, null=True, blank=True)
@@ -128,7 +133,7 @@ class Tweet(TimeStampedModel):
     retweet_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
-    view_count = models.IntegerField(null=True)
+    view_count = models.IntegerField(null=True, blank=True)
     scrapping_request = models.ForeignKey(
         ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
     )
