@@ -132,6 +132,7 @@ class Tweet(TimeStampedModel):
     scrapping_request = models.ForeignKey(
         ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
     )
+    raw_tweet_object = models.JSONField(null=True, blank=True)
 
     objects = TweetManager()
 
