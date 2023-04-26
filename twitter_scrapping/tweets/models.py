@@ -124,8 +124,8 @@ class Tweet(TimeStampedModel):
         blank=True,
         related_name="conversation_tweets_set",
     )
-    retweeted_tweet_id = models.CharField(max_length=30, null=True, blank=True)
-    quoted_tweet_id = models.CharField(max_length=30, null=True, blank=True)
+    retweeted_id = models.CharField(max_length=30, null=True, blank=True)
+    quoted_id = models.CharField(max_length=30, null=True, blank=True)
     user = models.ForeignKey(
         TwitterUser, on_delete=models.CASCADE, related_name="tweet_user"
     )
