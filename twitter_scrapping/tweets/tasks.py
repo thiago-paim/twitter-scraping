@@ -22,6 +22,12 @@ def scrape_single_tweet(tweet_id):
 
 
 @shared_task
+def scrape_single_tweet_from_user(username):
+    tweet = next(CustomTwitterProfileScraper(username).get_items())
+    return tweet
+
+
+@shared_task
 def scrape_tweets_from_user(req_id):
     try:
         from .models import ScrappingRequest
