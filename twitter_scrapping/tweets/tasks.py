@@ -8,6 +8,7 @@ import snscrape.modules.twitter as sntwitter
 import traceback
 
 from .serializers import SnscrapeTweetSerializer
+from .utils import CustomTwitterProfileScraper
 
 logger = get_task_logger(__name__)
 
@@ -40,7 +41,7 @@ def scrape_tweets_from_user(req_id):
         MIN_TWEETS = (
             5  # É comum que usuários tenham 1 ou 2 tweets fixados no topo do perfil
         )
-        tweet_scrapper = sntwitter.TwitterProfileScraper(username).get_items()
+        tweet_scrapper = CustomTwitterProfileScraper(username).get_items()
 
         # Loop manual necessário para que erros em tweets pontuais não travem o generator
         while True:
