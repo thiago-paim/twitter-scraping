@@ -55,6 +55,12 @@ class ScrappingRequest(TimeStampedModel):
         self.finished = timezone.now()
         self.save()
 
+    def reset(self):
+        self.status = "created"
+        self.started = None
+        self.finished = None
+        self.save()
+
 
 class TwitterUser(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
