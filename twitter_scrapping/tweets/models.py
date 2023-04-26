@@ -82,10 +82,10 @@ class TweetManager(models.Manager):
 
     def politician_tweets(self):
         from django.db.models import Q
-        from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+        from tweets.values import TOTAL_POLITICIANS, SCRAPPING_PERIODS
 
         or_conditions = Q()
-        for dep in TOTAL_SP_STATE_DEP:
+        for dep in TOTAL_POLITICIANS:
             or_conditions.add(Q(conversation_tweet__user__username__iexact=dep), Q.OR)
 
         since = min([period["since"] for period in SCRAPPING_PERIODS])
