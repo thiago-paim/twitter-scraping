@@ -119,6 +119,8 @@ class Tweet(TimeStampedModel):
         null=True,
         related_name="conversation_tweets_set",
     )
+    retweeted_tweet_id = models.CharField(max_length=30, null=True, blank=True)
+    quoted_tweet_id = models.CharField(max_length=30, null=True, blank=True)
     user = models.ForeignKey(
         TwitterUser, on_delete=models.CASCADE, related_name="tweet_user"
     )
@@ -126,6 +128,7 @@ class Tweet(TimeStampedModel):
     retweet_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
+    view_count = models.IntegerField(null=True)
     scrapping_request = models.ForeignKey(
         ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
     )
