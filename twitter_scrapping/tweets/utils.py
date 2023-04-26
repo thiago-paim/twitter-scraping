@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.utils import timezone
 import pandas as pd
+from snscrape.modules.twitter import TwitterProfileScraper, TweetRef
 
 
 def export_csv(queryset, filename=None):
@@ -12,3 +13,11 @@ def export_csv(queryset, filename=None):
 
     df = pd.DataFrame(tweet.export() for tweet in queryset)
     df.to_csv(filepath, chunksize=chunksize)
+
+
+class CustomTwitterProfileScraper(TwitterProfileScraper):
+    def _graphql_timeline_tweet_item_result_to_tweet(self, result, tweetId=None):
+        if result["__typename"] == "Tweet":
+            if not "rest_id" in result["core"]["user_results"]["result"]:
+                return TweetRef(id=result["rest_id"])
+        return super()._graphql_timeline_tweet_item_result_to_tweet(result, tweetId)

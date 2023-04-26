@@ -18,6 +18,7 @@ class ScrappingRequest(TimeStampedModel):
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
     recurse = models.BooleanField(default=False)
+    include_replies = models.BooleanField(default=True)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
@@ -31,11 +32,13 @@ class ScrappingRequest(TimeStampedModel):
         return None
 
     def create_scrapping_task(self):
-        from .tasks import scrape_tweets
+        from .tasks import scrape_tweets_and_replies, scrape_tweets_from_user
 
-        if self.status != "created":
-            return
-        scrape_tweets.delay(self.id)
+        if self.status == "created":
+            if self.include_replies:
+                scrape_tweets_and_replies.delay(self.id)
+            else:
+                scrape_tweets_from_user.delay(self.id)
 
     def start(self):
         self.status = "started"
@@ -50,6 +53,12 @@ class ScrappingRequest(TimeStampedModel):
     def interrupt(self):
         self.status = "interrupted"
         self.finished = timezone.now()
+        self.save()
+
+    def reset(self):
+        self.status = "created"
+        self.started = None
+        self.finished = None
         self.save()
 
 
@@ -79,10 +88,10 @@ class TweetManager(models.Manager):
 
     def politician_tweets(self):
         from django.db.models import Q
-        from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+        from tweets.values import TOTAL_POLITICIANS, SCRAPPING_PERIODS
 
         or_conditions = Q()
-        for dep in TOTAL_SP_STATE_DEP:
+        for dep in TOTAL_POLITICIANS:
             or_conditions.add(Q(conversation_tweet__user__username__iexact=dep), Q.OR)
 
         since = min([period["since"] for period in SCRAPPING_PERIODS])

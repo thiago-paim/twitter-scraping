@@ -10,6 +10,20 @@ class BaseUsernameFilter(admin.SimpleListFilter):
         return ((None, None),)
 
 
+class TwitterIdFilter(admin.SimpleListFilter):
+    title = "twitter id"
+    parameter_name = "twitter_id"
+    template = "tweets/admin_input_filter.html"
+
+    def lookups(self, request, model_admin):
+        return ((None, None),)
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            return queryset.filter(twitter_id=value)
+
+
 class UserUsernameFilter(BaseUsernameFilter):
     title = "username"
     parameter_name = "username"
@@ -58,6 +72,7 @@ class TweetAdmin(admin.ModelAdmin):
         UserUsernameFilter,
         ReplyToUsernameFilter,
         ConversationUsernameFilter,
+        TwitterIdFilter,
     )
     raw_id_fields = (
         "user",
@@ -106,11 +121,13 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "until",
         "started",
         "finished",
+        "include_replies",
         "tweets_saved",
     )
     list_filter = (
         "created",
         "status",
+        "include_replies",
     )
     actions = ["start_scrapping", "export_scrapping_results"]
 
