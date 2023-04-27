@@ -1,28 +1,60 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from copy import deepcopy
 from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.serializers import ValidationError
-import snscrape.modules.twitter as sntwitter
+from snscrape.modules.twitter import (
+    TwitterTweetScraperMode,
+    TwitterTweetScraper,
+    TwitterSearchScraper,
+    TwitterProfileScraper,
+    User as SNUser,
+    Tweet as SNTweet,
+    Tombstone,
+)
 import traceback
 
 from .serializers import SnscrapeTweetSerializer
-from .utils import CustomTwitterProfileScraper
+from .utils import CustomTwitterProfileScraper, tweet_to_json
 
 logger = get_task_logger(__name__)
 
 
 @shared_task
-def scrape_single_tweet(tweet_id):
-    mode = sntwitter.TwitterTweetScraperMode.SINGLE
-    tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
+def scrape_tweet(tweet_id, mode=TwitterTweetScraperMode.SINGLE):
+    mode = mode
+    tweet_scrapper = TwitterTweetScraper(tweet_id, mode=mode).get_items()
     tweet = next(tweet_scrapper)
     return tweet
 
 
+def record_tweet(raw_tweet, req_id):
+    # Consider moving this to SnscrapeTweetSerializer
+    tweet = deepcopy(raw_tweet)
+    tweet.raw_tweet_object = tweet_to_json(tweet)
+
+    if tweet.quotedTweet:
+        if type(tweet.quotedTweet) == SNTweet:
+            qt_tweet, created = record_tweet(tweet.quotedTweet, req_id)
+            tweet.quoted_id = qt_tweet.twitter_id
+            tweet.quoted_tweet = qt_tweet.id
+
+        if type(tweet.quotedTweet) == Tombstone:
+            tweet.quoted_id = tweet.quotedTweet.id
+
+    tweet.scrapping_request = req_id
+    tweet_serializer = SnscrapeTweetSerializer(data=tweet)
+    if tweet_serializer.is_valid():
+        tweet, created = tweet_serializer.save()
+        return tweet, created
+    else:
+        raise ValidationError(tweet_serializer.errors)
+
+
 @shared_task
-def scrape_single_tweet_from_user(username):
+def scrape_last_tweet_from_user(username):
     tweet = next(CustomTwitterProfileScraper(username).get_items())
     return tweet
 
@@ -71,7 +103,6 @@ def scrape_tweets_from_user(req_id):
                             updated_tweets.append(t)
 
                     if tweet.quotedTweet:
-                        print(f"{tweet.id=} has retweet: {tweet.quotedTweet.id=}")
                         qtTweet = tweet.quotedTweet
                         tweet.quotedTweet = qtTweet.id
                         tweets.append(qtTweet)
@@ -142,7 +173,7 @@ def scrape_tweets_and_replies(req_id):
 
         started_scrapping_at = timezone.now()
         query = f"from:{username} since:{since} until:{until}"
-        user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
+        user_scrapping_results = TwitterSearchScraper(query).get_items()
         tweet_ids = []
         logger.info(f'Contando tweets do usuário "{username}"')
         for tweet in user_scrapping_results:
@@ -152,13 +183,11 @@ def scrape_tweets_and_replies(req_id):
         logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
         tweets_and_replies = []
         if req.recurse:
-            mode = sntwitter.TwitterTweetScraperMode.RECURSE
+            mode = TwitterTweetScraperMode.RECURSE
         else:
-            mode = sntwitter.TwitterTweetScraperMode.SCROLL
+            mode = TwitterTweetScraperMode.SCROLL
         for tweet_id in tweet_ids:
-            tweet_scrapper = sntwitter.TwitterTweetScraper(
-                tweet_id, mode=mode
-            ).get_items()
+            tweet_scrapper = TwitterTweetScraper(tweet_id, mode=mode).get_items()
             try:
                 # Loop manual necessário para que erros em tweets pontuais não travem o generator
                 while True:

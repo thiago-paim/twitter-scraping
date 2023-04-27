@@ -3,7 +3,12 @@ from django.conf import settings
 from django.utils import timezone
 import json
 import pandas as pd
-from snscrape.modules.twitter import TwitterProfileScraper, TweetRef
+from snscrape.modules.twitter import (
+    TwitterProfileScraper,
+    TweetRef,
+    User as SNUser,
+    Tweet as SNTweet,
+)
 
 
 def export_csv(queryset, filename=None):
@@ -28,10 +33,14 @@ class CustomTwitterProfileScraper(TwitterProfileScraper):
 def tweet_to_json(tweet):
     """Converts a snscrape.Tweet object to a JSON string"""
     tweet_dict = deepcopy(tweet.__dict__)
-    user_dict = tweet_dict["user"].__dict__
 
-    for key, value in user_dict.items():
-        user_dict[key] = str(value)
+    if tweet_dict.get("quotedTweet"):
+        tweet_dict["quotedTweet"] = tweet_to_json(tweet_dict["quotedTweet"])
+
+    if tweet_dict.get("user"):
+        user_dict = tweet_dict["user"].__dict__
+        for key, value in user_dict.items():
+            user_dict[key] = str(value)
 
     for key, value in tweet_dict.items():
         tweet_dict[key] = str(value)

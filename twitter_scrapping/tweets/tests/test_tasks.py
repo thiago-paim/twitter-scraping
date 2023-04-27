@@ -2,8 +2,9 @@ from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
 from unittest.mock import patch
+from snscrape.modules.twitter import Tombstone
 
-from tweets.models import Tweet, ScrappingRequest
+from tweets.models import Tweet, TwitterUser, ScrappingRequest
 from tweets.tests.fixtures import (
     tweet1,
     tweet1_updated_tweet,
@@ -11,9 +12,102 @@ from tweets.tests.fixtures import (
     tweet1_updated_both,
     tweet1_incomplete,
 )
-from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies
+from tweets.tests.tweet_samples import (
+    normal_tweet,
+    tweet_with_quoted_tweet,
+    tweet_with_quoted_tombstone,
+)
+from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies, record_tweet
+from tweets.utils import tweet_to_json
 
 tz = timezone.get_default_timezone()
+
+
+class RecordTweetTest(TestCase):
+    def setUp(self):
+        self.maxDiff = None
+        self.req = ScrappingRequest.objects.create(
+            username="GergelyOrosz",
+            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
+            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
+        )
+
+    def _validate_user(self, user, scraped_user):
+        self.assertEqual(user.twitter_id, str(scraped_user.id))
+        self.assertEqual(user.username, scraped_user.username)
+        self.assertEqual(user.display_name, scraped_user.displayname)
+        self.assertEqual(user.description, scraped_user.rawDescription)
+        self.assertEqual(user.account_created_at, scraped_user.created)
+        self.assertEqual(user.location, scraped_user.location)
+        self.assertEqual(user.followers_count, scraped_user.followersCount)
+        self.assertEqual(user.following_count, scraped_user.friendsCount)
+        self.assertEqual(user.tweet_count, scraped_user.statusesCount)
+        self.assertEqual(user.listed_count, scraped_user.listedCount)
+
+    def _validate_tweet(self, tweet, scraped_tweet):
+        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.twitter_id, str(scraped_tweet.id))
+        self.assertEqual(tweet.content, scraped_tweet.rawContent)
+        self.assertEqual(tweet.published_at, scraped_tweet.date)
+        self.assertEqual(
+            tweet.in_reply_to_id,
+            str(scraped_tweet.inReplyToTweetId)
+            if scraped_tweet.inReplyToTweetId
+            else None,
+        )
+        self.assertEqual(
+            tweet.conversation_id,
+            str(scraped_tweet.conversationId) if scraped_tweet.conversationId else None,
+        )
+        self.assertEqual(
+            tweet.retweeted_id,
+            str(scraped_tweet.retweetedTweet) if scraped_tweet.retweetedTweet else None,
+        )
+        self.assertEqual(
+            tweet.quoted_id,
+            str(scraped_tweet.quotedTweet.id) if scraped_tweet.quotedTweet else None,
+        )
+        self.assertEqual(
+            tweet.quoted_tweet.twitter_id if tweet.quoted_tweet else None,
+            str(scraped_tweet.quotedTweet.id) if tweet.quoted_tweet else None,
+        )
+        self.assertEqual(tweet.reply_count, scraped_tweet.replyCount)
+        self.assertEqual(tweet.retweet_count, scraped_tweet.retweetCount)
+        self.assertEqual(tweet.like_count, scraped_tweet.likeCount)
+        self.assertEqual(tweet.quote_count, scraped_tweet.quoteCount)
+        self.assertEqual(tweet.view_count, scraped_tweet.viewCount)
+
+    def test_record_tweet(self):
+        scraped_tweet = deepcopy(normal_tweet)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+    def test_record_tweet_quoted_tweet(self):
+        scraped_tweet = deepcopy(tweet_with_quoted_tweet)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+        qt_tweet_json = tweet_to_json(deepcopy(scraped_tweet.quotedTweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+        self._validate_user(tweet.quoted_tweet.user, scraped_tweet.quotedTweet.user)
+        self._validate_tweet(tweet.quoted_tweet, scraped_tweet.quotedTweet)
+        self.assertEqual(tweet.quoted_tweet.raw_tweet_object, qt_tweet_json)
+
+    def test_record_tweet_quoted_tombstone(self):
+        scraped_tweet = deepcopy(tweet_with_quoted_tombstone)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
 
 
 class TasksTest(TestCase):
