@@ -78,6 +78,8 @@ class TweetAdmin(admin.ModelAdmin):
         "user",
         "in_reply_to_tweet",
         "conversation_tweet",
+        "retweeted_tweet",
+        "quoted_tweet",
         "scrapping_request",
     )
     actions = ["export_tweets"]
