@@ -110,14 +110,35 @@ class Tweet(TimeStampedModel):
     published_at = models.DateTimeField("tweet publish date")
     in_reply_to_id = models.CharField(max_length=30, null=True, blank=True)
     in_reply_to_tweet = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, null=True, related_name="tweet_replies_set"
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tweet_replies_set",
     )
     conversation_id = models.CharField(max_length=30, null=True, blank=True)
     conversation_tweet = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
         null=True,
+        blank=True,
         related_name="conversation_tweets_set",
+    )
+    retweeted_id = models.CharField(max_length=30, null=True, blank=True)
+    retweeted_tweet = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="retweeted_tweets_set",
+    )
+    quoted_id = models.CharField(max_length=30, null=True, blank=True)
+    quoted_tweet = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quoted_tweets_set",
     )
     user = models.ForeignKey(
         TwitterUser, on_delete=models.CASCADE, related_name="tweet_user"
@@ -126,9 +147,11 @@ class Tweet(TimeStampedModel):
     retweet_count = models.IntegerField(default=0)
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
+    view_count = models.IntegerField(null=True, blank=True)
     scrapping_request = models.ForeignKey(
         ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
     )
+    raw_tweet_object = models.JSONField(null=True, blank=True)
 
     objects = TweetManager()
 
@@ -201,3 +224,31 @@ class Tweet(TimeStampedModel):
             if tweet:
                 return tweet.user.username
         return None
+
+    def get_retweeted_tweet(self):
+        if self.retweeted_tweet:
+            return self.retweeted_tweet
+        try:
+            tweet = Tweet.objects.get(twitter_id=self.retweeted_id)
+            self.retweeted_tweet = tweet
+            self.save()
+            return tweet
+        except Tweet.DoesNotExist:
+            return None
+
+    def get_quoted_tweet(self):
+        if self.quoted_tweet:
+            return self.quoted_tweet
+        try:
+            tweet = Tweet.objects.get(twitter_id=self.quoted_id)
+            self.quoted_tweet = tweet
+            self.save()
+            return tweet
+        except Tweet.DoesNotExist:
+            return None
+
+    def fetch_related_tweets(self):
+        self.get_in_reply_to_tweet()
+        self.get_conversation_tweet()
+        self.get_retweeted_tweet()
+        self.get_quoted_tweet()
