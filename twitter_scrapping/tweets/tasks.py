@@ -44,6 +44,15 @@ def record_tweet(raw_tweet, req_id):
         if type(tweet.quotedTweet) == Tombstone:
             tweet.quoted_id = tweet.quotedTweet.id
 
+    if tweet.retweetedTweet:
+        if type(tweet.retweetedTweet) == SNTweet:
+            rt_tweet, created = record_tweet(tweet.retweetedTweet, req_id)
+            tweet.retweeted_id = rt_tweet.twitter_id
+            tweet.retweeted_tweet = rt_tweet.id
+
+        if type(tweet.retweetedTweet) == Tombstone:
+            tweet.retweeted_id = tweet.retweetedTweet.id
+
     tweet.scrapping_request = req_id
     tweet_serializer = SnscrapeTweetSerializer(data=tweet)
     if tweet_serializer.is_valid():

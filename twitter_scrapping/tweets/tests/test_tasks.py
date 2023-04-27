@@ -16,6 +16,7 @@ from tweets.tests.tweet_samples import (
     normal_tweet,
     tweet_with_quoted_tweet,
     tweet_with_quoted_tombstone,
+    tweet_with_retweet,
 )
 from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies, record_tweet
 from tweets.utils import tweet_to_json
@@ -61,7 +62,13 @@ class RecordTweetTest(TestCase):
         )
         self.assertEqual(
             tweet.retweeted_id,
-            str(scraped_tweet.retweetedTweet) if scraped_tweet.retweetedTweet else None,
+            str(scraped_tweet.retweetedTweet.id)
+            if scraped_tweet.retweetedTweet
+            else None,
+        )
+        self.assertEqual(
+            tweet.retweeted_tweet.twitter_id if tweet.retweeted_tweet else None,
+            str(scraped_tweet.retweetedTweet.id) if tweet.retweeted_tweet else None,
         )
         self.assertEqual(
             tweet.quoted_id,
@@ -108,6 +115,25 @@ class RecordTweetTest(TestCase):
         self._validate_tweet(tweet, scraped_tweet)
         self._validate_user(tweet.user, scraped_tweet.user)
         self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+    def test_record_tweet_retweeted_tweet(self):
+        scraped_tweet = deepcopy(tweet_with_retweet)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+        rt_tweet_json = tweet_to_json(deepcopy(scraped_tweet.retweetedTweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+        self._validate_user(
+            tweet.retweeted_tweet.user, scraped_tweet.retweetedTweet.user
+        )
+        self._validate_tweet(tweet.retweeted_tweet, scraped_tweet.retweetedTweet)
+        self.assertEqual(tweet.retweeted_tweet.raw_tweet_object, rt_tweet_json)
+
+    def test_record_tweet_retweeted_tombstone(self):
+        pass  # Requires sample tweet
 
 
 class TasksTest(TestCase):

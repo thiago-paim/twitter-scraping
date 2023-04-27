@@ -37,6 +37,9 @@ def tweet_to_json(tweet):
     if tweet_dict.get("quotedTweet"):
         tweet_dict["quotedTweet"] = tweet_to_json(tweet_dict["quotedTweet"])
 
+    if tweet_dict.get("retweetedTweet"):
+        tweet_dict["retweetedTweet"] = tweet_to_json(tweet_dict["retweetedTweet"])
+
     if tweet_dict.get("user"):
         user_dict = tweet_dict["user"].__dict__
         for key, value in user_dict.items():
