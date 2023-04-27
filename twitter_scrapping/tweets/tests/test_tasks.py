@@ -17,6 +17,8 @@ from tweets.tests.tweet_samples import (
     tweet_with_quoted_tweet,
     tweet_with_quoted_tombstone,
     tweet_with_retweet,
+    tweet_in_reply_to,
+    tweet_replying_another_reply,
 )
 from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies, record_tweet
 from tweets.utils import tweet_to_json
@@ -134,6 +136,24 @@ class RecordTweetTest(TestCase):
 
     def test_record_tweet_retweeted_tombstone(self):
         pass  # Requires sample tweet
+
+    def test_record_tweet_in_reply_to(self):
+        scraped_tweet = deepcopy(tweet_in_reply_to)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+    def test_record_tweet_in_reply_to_another_reply(self):
+        scraped_tweet = deepcopy(tweet_replying_another_reply)
+        tweet, created = record_tweet(scraped_tweet, self.req.id)
+        tweet_json = tweet_to_json(deepcopy(scraped_tweet))
+
+        self._validate_tweet(tweet, scraped_tweet)
+        self._validate_user(tweet.user, scraped_tweet.user)
+        self.assertEqual(tweet.raw_tweet_object, tweet_json)
 
 
 class TasksTest(TestCase):
