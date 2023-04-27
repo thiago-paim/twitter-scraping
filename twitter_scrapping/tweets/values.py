@@ -706,6 +706,7 @@ SCRAPPING_PERIODS = [
     {"since": "2023-01-01", "until": "2023-02-01"},
     {"since": "2023-02-01", "until": "2023-03-01"},
     {"since": "2023-03-01", "until": "2023-04-01"},
+    {"since": "2023-04-01", "until": "2023-05-01"},
 ]
 
 HATE2VEC_BADWORDS = [
