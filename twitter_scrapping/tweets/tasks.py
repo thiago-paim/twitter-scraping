@@ -60,6 +60,27 @@ def scrape_tweets_from_user(req_id):
                     break
 
                 try:
+                    if tweet.retweetedTweet:
+                        rtTweet = tweet.retweetedTweet
+                        tweet.retweetedTweet = rtTweet.id
+                        tweets.append(rtTweet)
+                        t, created = save_scrapped_tweet(rtTweet, req_id)
+                        if created:
+                            created_tweets.append(t)
+                        else:
+                            updated_tweets.append(t)
+
+                    if tweet.quotedTweet:
+                        print(f"{tweet.id=} has retweet: {tweet.quotedTweet.id=}")
+                        qtTweet = tweet.quotedTweet
+                        tweet.quotedTweet = qtTweet.id
+                        tweets.append(qtTweet)
+                        t, created = save_scrapped_tweet(qtTweet, req_id)
+                        if created:
+                            created_tweets.append(t)
+                        else:
+                            updated_tweets.append(t)
+
                     tweets.append(tweet)
                     t, created = save_scrapped_tweet(tweet, req_id)
                     if created:
