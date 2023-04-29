@@ -2,14 +2,10 @@ from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
 from unittest.mock import patch
-from snscrape.modules.twitter import Tombstone
 
-from tweets.models import Tweet, TwitterUser, ScrappingRequest
+from tweets.models import Tweet, ScrappingRequest
 from tweets.tests.fixtures import (
     tweet1,
-    tweet1_updated_tweet,
-    tweet1_updated_user,
-    tweet1_updated_both,
     tweet1_incomplete,
 )
 from tweets.tests.tweet_samples import (
@@ -19,22 +15,22 @@ from tweets.tests.tweet_samples import (
     tweet_with_retweet,
     tweet_in_reply_to,
     tweet_replying_another_reply,
+    user_tweet_1,
+    user_tweet_2,
+    user_tweet_3,
 )
-from tweets.tasks import save_scrapped_tweet, scrape_tweets_and_replies, record_tweet
+from tweets.tasks import (
+    save_scrapped_tweet,
+    scrape_tweets_and_replies,
+    record_tweet,
+    scrape_user_tweets,
+)
 from tweets.utils import tweet_to_json
 
 tz = timezone.get_default_timezone()
 
 
-class RecordTweetTest(TestCase):
-    def setUp(self):
-        self.maxDiff = None
-        self.req = ScrappingRequest.objects.create(
-            username="GergelyOrosz",
-            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
-            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
-        )
-
+class BaseTweetTestCase(TestCase):
     def _validate_user(self, user, scraped_user):
         self.assertEqual(user.twitter_id, str(scraped_user.id))
         self.assertEqual(user.username, scraped_user.username)
@@ -85,6 +81,15 @@ class RecordTweetTest(TestCase):
         self.assertEqual(tweet.like_count, scraped_tweet.likeCount)
         self.assertEqual(tweet.quote_count, scraped_tweet.quoteCount)
         self.assertEqual(tweet.view_count, scraped_tweet.viewCount)
+
+
+class RecordTweetTest(BaseTweetTestCase):
+    def setUp(self):
+        self.req = ScrappingRequest.objects.create(
+            username="GergelyOrosz",
+            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
+            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
+        )
 
     def test_record_tweet(self):
         scraped_tweet = deepcopy(normal_tweet)
@@ -154,6 +159,27 @@ class RecordTweetTest(TestCase):
         self._validate_tweet(tweet, scraped_tweet)
         self._validate_user(tweet.user, scraped_tweet.user)
         self.assertEqual(tweet.raw_tweet_object, tweet_json)
+
+
+class ScrapeUserTweetsTest(BaseTweetTestCase):
+    def setUp(self):
+        self.maxDiff = None
+        self.req = ScrappingRequest.objects.create(
+            username="GergelyOrosz",
+            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
+            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
+        )
+
+    @patch("tweets.utils.CustomTwitterProfileScraper.get_items")
+    def test_scrape_user_tweets(self, user_scraper_mock):
+        user_scraper_mock.side_effect = [
+            [user_tweet_1, user_tweet_2, user_tweet_3].__iter__()
+        ]
+        scrape_user_tweets(self.req.id)
+        tweets = Tweet.objects.all()
+        self._validate_tweet(tweets[0], user_tweet_1)
+        self._validate_tweet(tweets[1], user_tweet_2)
+        self._validate_tweet(tweets[2], user_tweet_3)
 
 
 class TasksTest(TestCase):
