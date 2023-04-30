@@ -47,7 +47,10 @@ class ScrappingRequest(TimeStampedModel):
         return f"<ScrappingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
 
     def log(self, msg):
-        self.logs = self.logs + msg + "\n"
+        if self.logs:
+            self.logs = self.logs + msg + "\n"
+        else:
+            self.logs = msg + "\n"
         self.save()
 
     def create_scrapping_task(self):

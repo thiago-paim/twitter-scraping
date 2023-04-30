@@ -1,5 +1,5 @@
 from copy import deepcopy
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from unittest.mock import patch
 
@@ -170,21 +170,42 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
         )
 
+    @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.utils.CustomTwitterProfileScraper.get_items")
-    @patch("tweets.tasks.start_next_scrapping_request")
+    @patch("tweets.tasks.start_next_scrapping_request.delay")
     def test_scrape_user_tweets(
-        self, start_next_scrapping_request_mock, user_scraper_mock
+        self,
+        start_next_scrapping_request_mock,
+        user_scraper_mock,
     ):
         user_scraper_mock.side_effect = [
             [user_tweet_1, user_tweet_2, user_tweet_3].__iter__()
         ]
-        scrape_user_tweets(self.req.id)
+        results = scrape_user_tweets(self.req.id)
+        self.assertEqual({"created_tweets": 3, "updated_tweets": 0}, results)
+
+        self.assertTrue(
+            ScrappingRequest.objects.filter(
+                twitter_id=user_tweet_1.id, username=self.req.username
+            )
+        )
+        self.assertFalse(
+            ScrappingRequest.objects.filter(
+                twitter_id=user_tweet_2.id, username=self.req.username
+            )
+        )
+        self.assertFalse(
+            ScrappingRequest.objects.filter(
+                twitter_id=user_tweet_3.id, username=self.req.username
+            )
+        )
+
         tweets = Tweet.objects.all()
         self._validate_tweet(tweets[0], user_tweet_1)
         self._validate_tweet(tweets[1], user_tweet_2)
         self._validate_tweet(tweets[2], user_tweet_3)
 
-        # Test that related ScrapingRequests were created
+        start_next_scrapping_request_mock.assert_called()
 
     def test_tombstone(self):
         ...
@@ -201,19 +222,24 @@ class ScrapeTweetRepliesTest(BaseTweetTestCase):
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
         )
 
+    @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.tasks.TwitterTweetScraper.get_items")
-    @patch("tweets.tasks.start_next_scrapping_request")
+    @patch("tweets.tasks.start_next_scrapping_request.delay")
     def test_scrape_tweet_replies(
         self, start_next_scrapping_request_mock, scraper_mock
     ):
         scraper_mock.side_effect = [
             [normal_tweet, tweet_in_reply_to, tweet_replying_another_reply].__iter__()
         ]
-        scrape_tweet_replies(normal_tweet.id, self.req.id)
+        results = scrape_tweet_replies(normal_tweet.id, self.req.id)
+        self.assertEqual({"created_tweets": 3, "updated_tweets": 0}, results)
+
         tweets = Tweet.objects.all()
         self._validate_tweet(tweets[0], normal_tweet)
         self._validate_tweet(tweets[1], tweet_in_reply_to)
         self._validate_tweet(tweets[2], tweet_replying_another_reply)
+
+        start_next_scrapping_request_mock.assert_called()
 
     def test_tombstone(self):
         ...
