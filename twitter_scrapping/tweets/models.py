@@ -40,6 +40,9 @@ class ScrappingRequest(TimeStampedModel):
             return self.finished - self.started
         return None
 
+    def get_twitter_url(self):
+        return f"https://twitter.com/{self.username}"
+
     def __repr__(self) -> str:
         return f"<ScrappingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
 
@@ -61,7 +64,7 @@ class ScrappingRequest(TimeStampedModel):
             scrapping_request=self,
             in_reply_to_id__isnull=True,
         )
-        self.log(f"related_conversations: {tweets.count()}")
+        self.log(f"related_conversations={tweets.count()}")
         reqs = []
         with transaction.atomic():
             # Using transactions to avoid db locks: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
@@ -72,7 +75,7 @@ class ScrappingRequest(TimeStampedModel):
                     since=self.since,
                     until=self.until,
                     include_replies=True,
-                    logs=f"parent_request={self.id}\nconversation={tweet.twitter_id}\n",
+                    logs=f"parent_request_id={self.id}\nconversation_id={tweet.twitter_id}\n",
                 )
                 reqs.append(req)
         req_ids = [req.id for req in reqs]
@@ -117,6 +120,9 @@ class TwitterUser(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.username
+
+    def get_twitter_url(self):
+        return f"https://twitter.com/{self.username}"
 
 
 class TweetManager(models.Manager):
