@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.fields import empty
 from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
 from .models import Tweet, TwitterUser
+from .utils import tweet_to_json
 
 
 class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):
@@ -50,10 +51,17 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
     conversationId = serializers.CharField(
         source="conversation_id", allow_null=True, allow_blank=True
     )
+    retweetedTweet = serializers.CharField(
+        source="retweeted_id", allow_null=True, allow_blank=True
+    )
+    quotedTweet = serializers.CharField(
+        source="quoted_id", allow_null=True, allow_blank=True
+    )
     replyCount = serializers.IntegerField(source="reply_count")
     retweetCount = serializers.IntegerField(source="retweet_count")
     likeCount = serializers.IntegerField(source="like_count")
     quoteCount = serializers.IntegerField(source="quote_count")
+    viewCount = serializers.IntegerField(source="view_count", allow_null=True)
 
     class Meta:
         model = Tweet
@@ -64,15 +72,20 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
             "date",
             "inReplyToTweetId",
             "conversationId",
+            "retweetedTweet",
+            "quotedTweet",
             "replyCount",
             "retweetCount",
             "likeCount",
             "quoteCount",
+            "viewCount",
             "scrapping_request",
+            "raw_tweet_object",
         ]
 
     def __init__(self, instance=None, data=empty, **kwargs):
         if isinstance(data, SNTweet):
+            data.raw_tweet_object = tweet_to_json(data)
             data.user = data.user.__dict__
             data = data.__dict__
         super().__init__(instance, data, **kwargs)
@@ -95,8 +108,7 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user, _ = self.get_or_create_user(validated_data)
         tweet = Tweet.objects.create(user=user, **validated_data)
-        tweet.get_in_reply_to_tweet()
-        tweet.get_conversation_tweet()
+        tweet.fetch_related_tweets()
         return tweet, True
 
     def update(self, instance, validated_data):
@@ -104,6 +116,5 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        instance.get_in_reply_to_tweet()
-        instance.get_conversation_tweet()
+        instance.fetch_related_tweets()
         return instance, False
