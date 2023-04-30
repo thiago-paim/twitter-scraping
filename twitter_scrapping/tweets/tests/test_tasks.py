@@ -10,11 +10,11 @@ from tweets.tests.fixtures import (
 )
 from tweets.tests.tweet_samples import (
     normal_tweet,
+    tweet_in_reply_to,
+    tweet_replying_another_reply,
     tweet_with_quoted_tweet,
     tweet_with_quoted_tombstone,
     tweet_with_retweet,
-    tweet_in_reply_to,
-    tweet_replying_another_reply,
     user_tweet_1,
     user_tweet_2,
     user_tweet_3,
@@ -24,6 +24,7 @@ from tweets.tasks import (
     scrape_tweets_and_replies,
     record_tweet,
     scrape_user_tweets,
+    scrape_tweet_replies,
 )
 from tweets.utils import tweet_to_json
 
@@ -140,7 +141,7 @@ class RecordTweetTest(BaseTweetTestCase):
         self.assertEqual(tweet.retweeted_tweet.raw_tweet_object, rt_tweet_json)
 
     def test_record_tweet_retweeted_tombstone(self):
-        pass  # Requires sample tweet
+        ...  # Requires sample tweet
 
     def test_record_tweet_in_reply_to(self):
         scraped_tweet = deepcopy(tweet_in_reply_to)
@@ -163,7 +164,6 @@ class RecordTweetTest(BaseTweetTestCase):
 
 class ScrapeUserTweetsTest(BaseTweetTestCase):
     def setUp(self):
-        self.maxDiff = None
         self.req = ScrappingRequest.objects.create(
             username="GergelyOrosz",
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
@@ -180,6 +180,38 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         self._validate_tweet(tweets[0], user_tweet_1)
         self._validate_tweet(tweets[1], user_tweet_2)
         self._validate_tweet(tweets[2], user_tweet_3)
+
+    def test_tombstone(self):
+        ...
+
+    def test_tweetref(self):
+        ...
+
+
+class ScrapeTweetRepliesTest(BaseTweetTestCase):
+    def setUp(self):
+        self.req = ScrappingRequest.objects.create(
+            username="GergelyOrosz",
+            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
+            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
+        )
+
+    @patch("tweets.tasks.TwitterTweetScraper.get_items")
+    def test_scrape_tweet_replies(self, scraper_mock):
+        scraper_mock.side_effect = [
+            [normal_tweet, tweet_in_reply_to, tweet_replying_another_reply].__iter__()
+        ]
+        scrape_tweet_replies(normal_tweet.id, self.req.id)
+        tweets = Tweet.objects.all()
+        self._validate_tweet(tweets[0], normal_tweet)
+        self._validate_tweet(tweets[1], tweet_in_reply_to)
+        self._validate_tweet(tweets[2], tweet_replying_another_reply)
+
+    def test_tombstone(self):
+        ...
+
+    def test_tweetref(self):
+        ...
 
 
 class TasksTest(TestCase):
