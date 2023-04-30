@@ -12,6 +12,7 @@ from snscrape.modules.twitter import (
     User as SNUser,
     Tweet as SNTweet,
 )
+from .models import Tweet, ScrappingRequest
 
 _logger = logging.getLogger(__name__)
 
@@ -139,3 +140,69 @@ def tweet_to_json(tweet):
         tweet_dict[key] = str(value)
 
     return json.dumps(tweet_dict)
+
+
+def clear_unwanted_rt_requests():
+    rts_ids = Tweet.objects.retweeted_tweets().values_list("twitter_id", flat=True)
+    reqs_for_rts = ScrappingRequest.objects.filter(twitter_id__in=rts_ids)
+    print(f"reqs_for_rts count: {len(reqs_for_rts)}")
+    deleted = []
+    for req in reqs_for_rts:
+        try:
+            tweet = Tweet.objects.get(twitter_id=req.twitter_id)
+        except Tweet.DoesNotExist:
+            deleted.append((req.id, req.username, req.twitter_id))
+            req.delete()
+            continue
+        if tweet.user.username.lower() != req.username:
+            deleted.append((req.id, req.username, req.twitter_id))
+            req.delete()
+            continue
+    print(f"deleted count: {len(deleted)}")
+    return deleted
+
+
+def clear_unwanted_qt_requests():
+    qts_ids = Tweet.objects.quoted_tweets().values_list("twitter_id", flat=True)
+    reqs_for_qts = ScrappingRequest.objects.filter(twitter_id__in=qts_ids)
+    print(f"reqs_for_qts count: {len(reqs_for_qts)}")
+    deleted = []
+    for req in reqs_for_qts:
+        try:
+            tweet = Tweet.objects.get(twitter_id=req.twitter_id)
+        except Tweet.DoesNotExist:
+            deleted.append((req.id, req.username, req.twitter_id))
+            req.delete()
+            continue
+        if tweet.user.username.lower() != req.username:
+            deleted.append((req.id, req.username, req.twitter_id))
+            req.delete()
+            continue
+    print(f"deleted count: {len(deleted)}")
+    return deleted
+
+
+def clear_duplicated_requests(username):
+    tweets = Tweet.objects.filter(
+        user__username__iexact=username, in_reply_to_id__isnull=True
+    )
+    requests = ScrappingRequest.objects.filter(
+        username__iexact=username,
+        include_replies=True,
+        status="created",
+        twitter_id__isnull=False,
+    )
+    print(f"{len(tweets)=}, {len(requests)=}")
+
+    for tweet in tweets:
+        reqs = requests.filter(twitter_id=tweet.twitter_id)
+        if reqs.count() > 1:
+            print(
+                tweet.id,
+                tweet.twitter_id,
+                tweet.user.username,
+                reqs.count(),
+                [r.id for r in reqs],
+            )
+            for req in reqs[1:]:
+                req.delete()
