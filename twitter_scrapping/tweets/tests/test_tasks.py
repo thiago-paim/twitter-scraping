@@ -168,6 +168,7 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
     def setUp(self):
         self.req = ScrappingRequest.objects.create(
             username="GergelyOrosz",
+            include_replies=False,
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
         )

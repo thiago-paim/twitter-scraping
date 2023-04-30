@@ -72,15 +72,22 @@ class ScrappingRequest(TimeStampedModel):
         with transaction.atomic():
             # Using transactions to avoid db locks: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
             for tweet in tweets:
-                req = ScrappingRequest.objects.create(
+                if not ScrappingRequest.objects.filter(
                     username=self.username,
                     twitter_id=tweet.twitter_id,
                     since=self.since,
                     until=self.until,
                     include_replies=True,
-                    logs=f"parent_request_id={self.id}\nconversation_id={tweet.twitter_id}\n",
-                )
-                reqs.append(req)
+                ):
+                    req = ScrappingRequest.objects.create(
+                        username=self.username,
+                        twitter_id=tweet.twitter_id,
+                        since=self.since,
+                        until=self.until,
+                        include_replies=True,
+                        logs=f"parent_request_id={self.id}\nconversation_id={tweet.twitter_id}\n",
+                    )
+                    reqs.append(req)
         req_ids = [req.id for req in reqs]
         self.log(f"Created conversation scraping requests: {req_ids}")
 
