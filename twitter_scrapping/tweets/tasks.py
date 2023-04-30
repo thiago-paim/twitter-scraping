@@ -139,6 +139,8 @@ def scrape_user_tweets(req_id):
         )
         req.interrupt()
 
+    start_next_scrapping_request.delay()
+
 
 # @shared_task
 def scrape_tweet_replies(tweet_id, req_id):
@@ -207,6 +209,8 @@ def scrape_tweet_replies(tweet_id, req_id):
             f"req_id={req_id}: Exceção geral ao executar scrape_tweet_replies: {e}:\n{tb}"
         )
         req.interrupt()
+
+    start_next_scrapping_request.delay()
 
 
 @shared_task

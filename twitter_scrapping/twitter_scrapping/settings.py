@@ -140,7 +140,7 @@ CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 CELERY_BEAT_SCHEDULE = {
     "start_next_scrapping_request": {
         "task": "tweets.tasks.start_next_scrapping_request",
-        "schedule": crontab(minute="*/1"),
+        "schedule": crontab(minute="*/30"),
     },
 }
 
