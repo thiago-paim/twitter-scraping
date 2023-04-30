@@ -163,3 +163,20 @@ class ScrappingRequestModelTest(TestCase):
 
         self.assertEqual(requests.count(), 1)
         self.assertEqual(requests[0].twitter_id, str(user_tweet_1.id))
+
+    def test_create_conversation_scraping_requests_duplicate_interrupted(self):
+        record_tweet(user_tweet_1, self.req.id)
+        record_tweet(user_tweet_2, self.req.id)
+        record_tweet(user_tweet_3, self.req.id)
+
+        self.req.create_conversation_scraping_requests()
+        new_req = ScrappingRequest.objects.get(twitter_id=str(user_tweet_1.id))
+        new_req.interrupt()
+        self.req.create_conversation_scraping_requests()
+
+        requests = ScrappingRequest.objects.filter(
+            username=self.req.username, include_replies=True, status="created"
+        )
+
+        self.assertEqual(requests.count(), 1)
+        self.assertEqual(requests[0].twitter_id, str(user_tweet_1.id))

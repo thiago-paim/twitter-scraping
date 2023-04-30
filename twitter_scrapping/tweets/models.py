@@ -78,6 +78,7 @@ class ScrappingRequest(TimeStampedModel):
                     since=self.since,
                     until=self.until,
                     include_replies=True,
+                    status__in=["created", "started"],
                 ):
                     req = ScrappingRequest.objects.create(
                         username=self.username,
