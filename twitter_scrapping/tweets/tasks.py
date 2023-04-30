@@ -30,14 +30,14 @@ def scrape_tweet(tweet_id, mode=TwitterTweetScraperMode.SINGLE):
     return tweet
 
 
-def record_tweet(raw_tweet, req_id):
+def record_tweet(raw_tweet, req_id=None):
     # Consider moving this to SnscrapeTweetSerializer
     tweet = deepcopy(raw_tweet)
     tweet.raw_tweet_object = tweet_to_json(tweet)
 
     if tweet.quotedTweet:
         if type(tweet.quotedTweet) == SNTweet:
-            qt_tweet, created = record_tweet(tweet.quotedTweet, req_id)
+            qt_tweet, created = record_tweet(tweet.quotedTweet)
             tweet.quoted_id = qt_tweet.twitter_id
             tweet.quoted_tweet = qt_tweet.id
 
@@ -46,7 +46,7 @@ def record_tweet(raw_tweet, req_id):
 
     if tweet.retweetedTweet:
         if type(tweet.retweetedTweet) == SNTweet:
-            rt_tweet, created = record_tweet(tweet.retweetedTweet, req_id)
+            rt_tweet, created = record_tweet(tweet.retweetedTweet)
             tweet.retweeted_id = rt_tweet.twitter_id
             tweet.retweeted_tweet = rt_tweet.id
 

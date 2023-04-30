@@ -45,7 +45,9 @@ class BaseTweetTestCase(TestCase):
         self.assertEqual(user.listed_count, scraped_user.listedCount)
 
     def _validate_tweet(self, tweet, scraped_tweet):
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        if tweet.scrapping_request:
+            self.assertEqual(tweet.scrapping_request.id, self.req.id)
+
         self.assertEqual(tweet.twitter_id, str(scraped_tweet.id))
         self.assertEqual(tweet.content, scraped_tweet.rawContent)
         self.assertEqual(tweet.published_at, scraped_tweet.date)
