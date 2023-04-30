@@ -18,8 +18,8 @@ class ScrappingRequest(TimeStampedModel):
     #     ("user_tweets", "User Tweets"),
     #     ("tweet_replies", "Tweet Replies"),
     # ]
-    username = models.CharField(max_length=50, null=True, blank=True)
-    twitter_id = models.CharField(max_length=30, null=True, blank=True)
+    username = models.CharField(max_length=50, db_index=True, null=True, blank=True)
+    twitter_id = models.CharField(max_length=30, db_index=True, null=True, blank=True)
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
     recurse = models.BooleanField(default=False)
@@ -31,7 +31,9 @@ class ScrappingRequest(TimeStampedModel):
     # )
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="created")
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, db_index=True, default="created"
+    )
     logs = models.TextField(null=True, blank=True)
 
     @property
@@ -116,7 +118,7 @@ class ScrappingRequest(TimeStampedModel):
 
 class TwitterUser(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
-    username = models.CharField(max_length=50)
+    username = models.CharField(max_length=50, db_index=True)
     display_name = models.CharField(max_length=50)
     description = models.CharField(max_length=300)
     account_created_at = models.DateTimeField("Twitter account creation date")
@@ -166,7 +168,7 @@ class TweetManager(models.Manager):
 
 
 class Tweet(TimeStampedModel):
-    twitter_id = models.CharField(max_length=30, unique=True)
+    twitter_id = models.CharField(max_length=30, db_index=True, unique=True)
     content = models.CharField(max_length=300)
     published_at = models.DateTimeField("tweet publish date")
     in_reply_to_id = models.CharField(max_length=30, null=True, blank=True)
