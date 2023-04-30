@@ -131,10 +131,15 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "status",
         "include_replies",
     )
-    actions = ["start_scrapping", "export_scrapping_results"]
+    actions = [
+        "start_scrapping",
+        "export_scrapping_results",
+        "create_conversation_scraping_requests",
+    ]
 
     def tweets_saved(self, obj):
         try:
+            # To Do: Include tweets from derived requests (might require a new fk field)
             return Tweet.objects.filter(scrapping_request=obj).count()
         except Exception as e:
             return None
@@ -146,6 +151,14 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
             obj.create_scrapping_task()
 
     start_scrapping.short_description = "Start scrapping tasks"
+
+    def create_conversation_scraping_requests(self, request, queryset):
+        for obj in queryset:
+            obj.create_conversation_scraping_requests()
+
+    create_conversation_scraping_requests.short_description = (
+        "Create conversation scraping requests"
+    )
 
     def export_scrapping_results(self, request, queryset):
         scrapping_ids = list(queryset.values_list("id", flat=True))
