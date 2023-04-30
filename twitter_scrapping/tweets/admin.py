@@ -88,7 +88,7 @@ class TweetAdmin(admin.ModelAdmin):
         try:
             return obj.in_reply_to_tweet.user.username
         except Exception as e:
-            return None
+            return obj.in_reply_to_id
 
     get_reply_to_user.short_description = "Reply to User"
 
@@ -96,7 +96,7 @@ class TweetAdmin(admin.ModelAdmin):
         try:
             return obj.conversation_tweet.user.username
         except Exception as e:
-            return None
+            return obj.conversation_id
 
     get_conversation_user.short_description = "Conversation User"
 
