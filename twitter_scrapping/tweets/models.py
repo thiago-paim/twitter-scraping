@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.text import Truncator
 from django_extensions.db.models import TimeStampedModel
@@ -8,22 +8,31 @@ from .values import BAD_WORDS
 
 
 class ScrappingRequest(TimeStampedModel):
-    TASK_STATUS_CHOICES = [
+    STATUS_CHOICES = [
         ("created", "Created"),
         ("started", "Started"),
         ("finished", "Finished"),
         ("interrupted", "Interrupted"),
     ]
+    # CATEGORY_CHOICES = [
+    #     ("user_tweets", "User Tweets"),
+    #     ("tweet_replies", "Tweet Replies"),
+    # ]
     username = models.CharField(max_length=50, null=True, blank=True)
+    twitter_id = models.CharField(max_length=30, null=True, blank=True)
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
     recurse = models.BooleanField(default=False)
-    include_replies = models.BooleanField(default=True)
+    include_replies = models.BooleanField(
+        default=True
+    )  # To Do: refactor to a choice field
+    # category = models.CharField(
+    #    max_length=14, choices=CATEGORY_CHOICES, default="user_tweets"
+    # )
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
-        max_length=12, choices=TASK_STATUS_CHOICES, default="created"
-    )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="created")
+    logs = models.TextField(null=True, blank=True)
 
     @property
     def duration(self):
@@ -31,14 +40,43 @@ class ScrappingRequest(TimeStampedModel):
             return self.finished - self.started
         return None
 
+    def __repr__(self) -> str:
+        return f"<ScrappingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
+
+    def log(self, msg):
+        self.logs = self.logs + msg + "\n"
+        self.save()
+
     def create_scrapping_task(self):
-        from .tasks import scrape_tweets_and_replies, scrape_user_tweets
+        from .tasks import scrape_user_tweets, scrape_tweet_replies
 
         if self.status == "created":
             if self.include_replies:
-                scrape_tweets_and_replies.delay(self.id)
+                scrape_tweet_replies.delay(tweet_id=self.twitter_id, req_id=self.id)
             else:
-                scrape_user_tweets.delay(self.id)
+                scrape_user_tweets.delay(req_id=self.id)
+
+    def create_conversation_scraping_requests(self):
+        tweets = Tweet.objects.filter(
+            scrapping_request=self,
+            in_reply_to_id__isnull=True,
+        )
+        self.log(f"related_conversations: {tweets.count()}")
+        reqs = []
+        with transaction.atomic():
+            # Using transactions to avoid db locks: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
+            for tweet in tweets:
+                req = ScrappingRequest.objects.create(
+                    username=self.username,
+                    twitter_id=tweet.twitter_id,
+                    since=self.since,
+                    until=self.until,
+                    include_replies=True,
+                    logs=f"parent_request={self.id}\nconversation={tweet.twitter_id}\n",
+                )
+                reqs.append(req)
+        req_ids = [req.id for req in reqs]
+        self.log(f"Created conversation scraping requests: {req_ids}")
 
     def start(self):
         self.status = "started"
