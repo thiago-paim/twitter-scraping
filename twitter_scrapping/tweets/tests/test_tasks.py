@@ -171,7 +171,10 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         )
 
     @patch("tweets.utils.CustomTwitterProfileScraper.get_items")
-    def test_scrape_user_tweets(self, user_scraper_mock):
+    @patch("tweets.tasks.start_next_scrapping_request")
+    def test_scrape_user_tweets(
+        self, start_next_scrapping_request_mock, user_scraper_mock
+    ):
         user_scraper_mock.side_effect = [
             [user_tweet_1, user_tweet_2, user_tweet_3].__iter__()
         ]
@@ -180,6 +183,8 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         self._validate_tweet(tweets[0], user_tweet_1)
         self._validate_tweet(tweets[1], user_tweet_2)
         self._validate_tweet(tweets[2], user_tweet_3)
+
+        # Test that related ScrapingRequests were created
 
     def test_tombstone(self):
         ...
@@ -197,7 +202,10 @@ class ScrapeTweetRepliesTest(BaseTweetTestCase):
         )
 
     @patch("tweets.tasks.TwitterTweetScraper.get_items")
-    def test_scrape_tweet_replies(self, scraper_mock):
+    @patch("tweets.tasks.start_next_scrapping_request")
+    def test_scrape_tweet_replies(
+        self, start_next_scrapping_request_mock, scraper_mock
+    ):
         scraper_mock.side_effect = [
             [normal_tweet, tweet_in_reply_to, tweet_replying_another_reply].__iter__()
         ]
