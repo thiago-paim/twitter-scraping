@@ -88,7 +88,7 @@ class ScrappingRequest(TimeStampedModel):
                         since=self.since,
                         until=self.until,
                         include_replies=True,
-                        logs=f"parent_request_id={self.id}\nconversation_id={tweet.twitter_id}\n",
+                        logs=f"parent_request={self.id}\nconversation_id={tweet.twitter_id}\n",
                     )
                     reqs.append(req)
         req_ids = [req.id for req in reqs]
