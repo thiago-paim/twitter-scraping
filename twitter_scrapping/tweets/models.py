@@ -31,6 +31,12 @@ class ScrappingRequest(TimeStampedModel):
             return self.finished - self.started
         return None
 
+    def get_twitter_url(self):
+        return f"https://twitter.com/{self.username}"
+
+    def __repr__(self) -> str:
+        return f"<ScrappingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
+
     def create_scrapping_task(self):
         from .tasks import scrape_tweets_and_replies, scrape_tweets_from_user
 
@@ -79,6 +85,9 @@ class TwitterUser(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.username
+
+    def get_twitter_url(self):
+        return f"https://twitter.com/{self.username}"
 
 
 class TweetManager(models.Manager):
