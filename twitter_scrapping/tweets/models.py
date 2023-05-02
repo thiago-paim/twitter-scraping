@@ -112,6 +112,12 @@ class TweetManager(models.Manager):
             or_conditions
         )
 
+    def retweeted_tweets(self):
+        return self.filter(retweeted_tweets_set__isnull=False)
+
+    def quoted_tweets(self):
+        return self.filter(quoted_tweets_set__isnull=False)
+
 
 class Tweet(TimeStampedModel):
     twitter_id = models.CharField(max_length=30, unique=True)
