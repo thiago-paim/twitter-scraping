@@ -51,12 +51,6 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
     conversationId = serializers.CharField(
         source="conversation_id", allow_null=True, allow_blank=True
     )
-    retweetedTweet = serializers.CharField(
-        source="retweeted_id", allow_null=True, allow_blank=True
-    )
-    quotedTweet = serializers.CharField(
-        source="quoted_id", allow_null=True, allow_blank=True
-    )
     replyCount = serializers.IntegerField(source="reply_count")
     retweetCount = serializers.IntegerField(source="retweet_count")
     likeCount = serializers.IntegerField(source="like_count")
@@ -72,8 +66,10 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
             "date",
             "inReplyToTweetId",
             "conversationId",
-            "retweetedTweet",
-            "quotedTweet",
+            "retweeted_id",
+            "retweeted_tweet",
+            "quoted_id",
+            "quoted_tweet",
             "replyCount",
             "retweetCount",
             "likeCount",
@@ -85,7 +81,6 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
 
     def __init__(self, instance=None, data=empty, **kwargs):
         if isinstance(data, SNTweet):
-            data.raw_tweet_object = tweet_to_json(data)
             data.user = data.user.__dict__
             data = data.__dict__
         super().__init__(instance, data, **kwargs)

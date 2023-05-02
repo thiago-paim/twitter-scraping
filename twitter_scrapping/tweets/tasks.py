@@ -1,34 +1,70 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from copy import deepcopy
 from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.serializers import ValidationError
-import snscrape.modules.twitter as sntwitter
+from snscrape.modules.twitter import (
+    TwitterTweetScraperMode,
+    TwitterTweetScraper,
+    TwitterSearchScraper,
+    TwitterProfileScraper,
+    User as SNUser,
+    Tweet as SNTweet,
+    Tombstone,
+)
 import traceback
 
 from .serializers import SnscrapeTweetSerializer
-from .utils import CustomTwitterProfileScraper
+from .utils import CustomTwitterProfileScraper, tweet_to_json, CustomTwitterTweetScraper
 
 logger = get_task_logger(__name__)
 
 
 @shared_task
-def scrape_single_tweet(tweet_id):
-    mode = sntwitter.TwitterTweetScraperMode.SINGLE
-    tweet_scrapper = sntwitter.TwitterTweetScraper(tweet_id, mode=mode).get_items()
+def scrape_tweet(tweet_id, mode=TwitterTweetScraperMode.SINGLE):
+    mode = mode
+    tweet_scrapper = TwitterTweetScraper(tweet_id, mode=mode).get_items()
     tweet = next(tweet_scrapper)
     return tweet
 
 
-@shared_task
-def scrape_single_tweet_from_user(username):
-    tweet = next(CustomTwitterProfileScraper(username).get_items())
-    return tweet
+def record_tweet(raw_tweet, req_id=None):
+    # Consider moving this to SnscrapeTweetSerializer
+    tweet = deepcopy(raw_tweet)
+    tweet.raw_tweet_object = tweet_to_json(tweet)
+
+    if tweet.quotedTweet:
+        if type(tweet.quotedTweet) == SNTweet:
+            qt_tweet, created = record_tweet(tweet.quotedTweet)
+            tweet.quoted_id = qt_tweet.twitter_id
+            tweet.quoted_tweet = qt_tweet.id
+
+        if type(tweet.quotedTweet) == Tombstone:
+            tweet.quoted_id = tweet.quotedTweet.id
+
+    if tweet.retweetedTweet:
+        if type(tweet.retweetedTweet) == SNTweet:
+            rt_tweet, created = record_tweet(tweet.retweetedTweet)
+            tweet.retweeted_id = rt_tweet.twitter_id
+            tweet.retweeted_tweet = rt_tweet.id
+
+        if type(tweet.retweetedTweet) == Tombstone:
+            tweet.retweeted_id = tweet.retweetedTweet.id
+
+    tweet.scrapping_request = req_id
+    tweet_serializer = SnscrapeTweetSerializer(data=tweet)
+    if tweet_serializer.is_valid():
+        tweet, created = tweet_serializer.save()
+        # To Do: Retornar também outros tweets que tenham sido criados (rt ou qt)
+        return tweet, created
+    else:
+        raise ValidationError(tweet_serializer.errors)
 
 
 @shared_task
-def scrape_tweets_from_user(req_id):
+def scrape_user_tweets(req_id):
     try:
         from .models import ScrappingRequest
 
@@ -38,7 +74,7 @@ def scrape_tweets_from_user(req_id):
 
         username = req.username
         logger.info(
-            f"req_id={req_id}: Iniciando scrape_tweets_from_user com username={username}, since={req.since}, until={req.until})"
+            f"req_id={req_id}: Iniciando scrape_user_tweets com username={username}, since={req.since}, until={req.until})"
         )
 
         tweets = []
@@ -53,6 +89,9 @@ def scrape_tweets_from_user(req_id):
         while True:
             try:
                 tweet = next(tweet_scrapper)
+                if type(tweet) != SNTweet:
+                    continue
+                tweets.append(tweet)
                 if tweet.date < req.since and len(tweets) > MIN_TWEETS:
                     logger.info(
                         f"req_id={req_id}: Limite de raspagem atingido em {tweet.date}"
@@ -60,29 +99,7 @@ def scrape_tweets_from_user(req_id):
                     break
 
                 try:
-                    if tweet.retweetedTweet:
-                        rtTweet = tweet.retweetedTweet
-                        tweet.retweetedTweet = rtTweet.id
-                        tweets.append(rtTweet)
-                        t, created = save_scrapped_tweet(rtTweet, req_id)
-                        if created:
-                            created_tweets.append(t)
-                        else:
-                            updated_tweets.append(t)
-
-                    if tweet.quotedTweet:
-                        print(f"{tweet.id=} has retweet: {tweet.quotedTweet.id=}")
-                        qtTweet = tweet.quotedTweet
-                        tweet.quotedTweet = qtTweet.id
-                        tweets.append(qtTweet)
-                        t, created = save_scrapped_tweet(qtTweet, req_id)
-                        if created:
-                            created_tweets.append(t)
-                        else:
-                            updated_tweets.append(t)
-
-                    tweets.append(tweet)
-                    t, created = save_scrapped_tweet(tweet, req_id)
+                    t, created = record_tweet(tweet, req_id)
                     if created:
                         created_tweets.append(t)
                     else:
@@ -91,7 +108,6 @@ def scrape_tweets_from_user(req_id):
                     logger.error(
                         f"req_id={req_id}: Erro de validação ao salvar tweet {tweet}: {e}"
                     )
-
                 except Exception as e:
                     tb = traceback.format_exc()
                     logger.error(
@@ -109,23 +125,121 @@ def scrape_tweets_from_user(req_id):
 
         logger.info(f"req_id={req_id}: Encontrados {len(tweets)} tweets")
 
+        req.log(f"tweets={[t.id for t in tweets]}")
+        req.log(f"created_tweets={[t.twitter_id for t in created_tweets]}")
+        req.log(f"updated_tweets={[t.twitter_id for t in updated_tweets]}")
         req.finish()
+        req.create_conversation_scraping_requests()
+
         finished_at = timezone.now()
         logger.info(
-            f"req_id={req_id}: Finalizando scrape_tweets_from_user(username={username}, since={req.since}, until={req.until}):"
+            f"req_id={req_id}: Finalizando scrape_user_tweets(username={username}, since={req.since}, until={req.until}):"
             + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
         )
         logger.info(f"req_id={req_id}: Tempo total={finished_at - started_at}")
+
     except Exception as e:
         tb = traceback.format_exc()
         logger.error(
-            f"req_id={req_id}: Exceção geral ao executar scrape_tweets_from_user: {e}:\n{tb}"
+            f"req_id={req_id}: Exceção geral ao executar scrape_user_tweets: {e}:\n{tb}"
         )
         req.interrupt()
+
+    start_next_scrapping_request.delay()
+    return {
+        "created_tweets": len(created_tweets),
+        "updated_tweets": len(updated_tweets),
+    }
+
+
+@shared_task
+def scrape_tweet_replies(tweet_id, req_id):
+    try:
+        from .models import ScrappingRequest
+
+        started_at = timezone.now()
+        req = ScrappingRequest.objects.get(id=req_id)
+        req.start()
+
+        username = req.username
+        logger.info(
+            f"req_id={req_id}: Iniciando scrape_tweet_replies com tweet_id={tweet_id}, username={username})"
+        )
+        tweets = []
+        created_tweets = []
+        updated_tweets = []
+
+        tweet_scraper = CustomTwitterTweetScraper(
+            tweet_id, mode=TwitterTweetScraperMode.SCROLL
+        ).get_items()
+
+        # Loop manual necessário para que erros em tweets pontuais não travem o generator
+        while True:
+            try:
+                tweet = next(tweet_scraper)
+                if type(tweet) != SNTweet:
+                    continue
+                tweets.append(tweet)
+                try:
+                    t, created = record_tweet(tweet, req_id)
+                    if created:
+                        created_tweets.append(t)
+                    else:
+                        updated_tweets.append(t)
+                except ValidationError as e:
+                    logger.error(
+                        f"req_id={req_id}: Erro de validação ao salvar tweet {tweet}: {e}"
+                    )
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    logger.error(
+                        f"req_id={req_id}: Exceção ao salvar tweet {tweet}: {e}:\n{tb}"
+                    )
+            except StopIteration:
+                break
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(
+                    f"req_id={req_id}: Exceção no tweet {tweet.id}: {e}:\n{tb}"
+                )
+                raise
+        logger.info(f"req_id={req_id}: Encontrados {len(tweets)} tweets")
+
+        req.log(f"tweets={[t.id for t in tweets]}")
+        req.log(f"created_tweets={[t.twitter_id for t in created_tweets]}")
+        req.log(f"updated_tweets={[t.twitter_id for t in updated_tweets]}")
+        req.finish()
+
+        finished_at = timezone.now()
+        logger.info(
+            f"req_id={req_id}: Finalizando scrape_tweet_replies(tweet_id={tweet_id}, username={username}):"
+            + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
+        )
+        logger.info(f"req_id={req_id}: Tempo total={finished_at - started_at}")
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(
+            f"req_id={req_id}: Exceção geral ao executar scrape_tweet_replies: {e}:\n{tb}"
+        )
+        req.interrupt()
+
+    start_next_scrapping_request.delay()
+    return {
+        "created_tweets": len(created_tweets),
+        "updated_tweets": len(updated_tweets),
+    }
+
+
+@shared_task
+def scrape_last_tweet_from_user(username):
+    tweet = next(CustomTwitterProfileScraper(username).get_items())
+    return tweet
 
 
 @shared_task
 def scrape_tweets_and_replies(req_id):
+    """DEPRECATED: TwitterSearchScraper doesn't work anymore"""
     try:
         from .models import ScrappingRequest
 
@@ -142,7 +256,7 @@ def scrape_tweets_and_replies(req_id):
 
         started_scrapping_at = timezone.now()
         query = f"from:{username} since:{since} until:{until}"
-        user_scrapping_results = sntwitter.TwitterSearchScraper(query).get_items()
+        user_scrapping_results = TwitterSearchScraper(query).get_items()
         tweet_ids = []
         logger.info(f'Contando tweets do usuário "{username}"')
         for tweet in user_scrapping_results:
@@ -152,13 +266,11 @@ def scrape_tweets_and_replies(req_id):
         logger.info(f'Raspando tweets do usuário "{username}" e suas respostas')
         tweets_and_replies = []
         if req.recurse:
-            mode = sntwitter.TwitterTweetScraperMode.RECURSE
+            mode = TwitterTweetScraperMode.RECURSE
         else:
-            mode = sntwitter.TwitterTweetScraperMode.SCROLL
+            mode = TwitterTweetScraperMode.SCROLL
         for tweet_id in tweet_ids:
-            tweet_scrapper = sntwitter.TwitterTweetScraper(
-                tweet_id, mode=mode
-            ).get_items()
+            tweet_scrapper = TwitterTweetScraper(tweet_id, mode=mode).get_items()
             try:
                 # Loop manual necessário para que erros em tweets pontuais não travem o generator
                 while True:
@@ -208,6 +320,7 @@ def scrape_tweets_and_replies(req_id):
 
 
 def save_scrapped_tweet(tweet_data, req_id):
+    """DEPRECATED: Deprecated along with scrape_tweets_and_replies"""
     tweet_data.scrapping_request = req_id
     tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
     if tweet_serializer.is_valid():
@@ -255,6 +368,7 @@ def start_next_scrapping_request():
         return
 
     requests = list(ScrappingRequest.objects.filter(status="created"))
+    started_reqs = []
     while requests and running_requests_count < settings.MAX_SCRAPPINGS:
         req = requests.pop(0)
         req.create_scrapping_task()
@@ -262,3 +376,5 @@ def start_next_scrapping_request():
             f"Iniciando ScrappingRequest(username={req.username}, since={req.since}, until={req.until})"
         )
         running_requests_count += 1
+        started_reqs.append(req.id)
+    return started_reqs

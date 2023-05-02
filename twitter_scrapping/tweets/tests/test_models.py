@@ -3,6 +3,12 @@ from django.test import TestCase
 from django.utils import timezone
 
 from tweets.models import Tweet, TwitterUser, ScrappingRequest
+from tweets.tasks import record_tweet
+from tweets.tests.tweet_samples import (
+    user_tweet_1,
+    user_tweet_2,
+    user_tweet_3,
+)
 
 tz = timezone.get_default_timezone()
 
@@ -118,3 +124,59 @@ class TweetManagerTestCase(TestCase):
             list(filtered_tweets.values_list("pk", flat=True)),
             [2, 3, 4],
         )
+
+
+class ScrappingRequestModelTest(TestCase):
+    def setUp(self):
+        self.req = ScrappingRequest.objects.create(
+            username="GergelyOrosz",
+            include_replies=False,
+            since=timezone.datetime(2022, 1, 1, tzinfo=tz),
+            until=timezone.datetime(2024, 1, 1, tzinfo=tz),
+        )
+
+    def test_create_conversation_scraping_requests(self):
+        record_tweet(user_tweet_1, self.req.id)
+        record_tweet(user_tweet_2, self.req.id)
+        record_tweet(user_tweet_3, self.req.id)
+
+        self.req.create_conversation_scraping_requests()
+
+        requests = ScrappingRequest.objects.filter(
+            username=self.req.username, include_replies=True, status="created"
+        )
+
+        self.assertEqual(requests.count(), 1)
+        self.assertEqual(requests[0].twitter_id, str(user_tweet_1.id))
+
+    def test_create_conversation_scraping_requests_doesnt_duplicate(self):
+        record_tweet(user_tweet_1, self.req.id)
+        record_tweet(user_tweet_2, self.req.id)
+        record_tweet(user_tweet_3, self.req.id)
+
+        self.req.create_conversation_scraping_requests()
+        self.req.create_conversation_scraping_requests()
+
+        requests = ScrappingRequest.objects.filter(
+            username=self.req.username, include_replies=True, status="created"
+        )
+
+        self.assertEqual(requests.count(), 1)
+        self.assertEqual(requests[0].twitter_id, str(user_tweet_1.id))
+
+    def test_create_conversation_scraping_requests_duplicate_interrupted(self):
+        record_tweet(user_tweet_1, self.req.id)
+        record_tweet(user_tweet_2, self.req.id)
+        record_tweet(user_tweet_3, self.req.id)
+
+        self.req.create_conversation_scraping_requests()
+        new_req = ScrappingRequest.objects.get(twitter_id=str(user_tweet_1.id))
+        new_req.interrupt()
+        self.req.create_conversation_scraping_requests()
+
+        requests = ScrappingRequest.objects.filter(
+            username=self.req.username, include_replies=True, status="created"
+        )
+
+        self.assertEqual(requests.count(), 1)
+        self.assertEqual(requests[0].twitter_id, str(user_tweet_1.id))

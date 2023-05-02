@@ -150,6 +150,7 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "status",
         "include_replies",
         "show_username_url",
+        "show_tweet_url",
         "since",
         "until",
         "started",
@@ -160,6 +161,7 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "status",
         "include_replies",
         UsernameFilter,
+        TwitterIdFilter,
         "created",
     )
     actions = [
@@ -172,6 +174,17 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         return format_html(f"<a href='{obj.get_twitter_url()}'>{obj.username}</a>")
 
     show_username_url.short_description = "Username"
+
+    def show_tweet_url(self, obj):
+        try:
+            tweet = Tweet.objects.get(twitter_id=obj.twitter_id)
+            return format_html(
+                f"<a href='{tweet.get_twitter_url()}'>{tweet.twitter_id}</a>"
+            )
+        except:
+            return obj.twitter_id
+
+    show_tweet_url.short_description = "Tweet Id"
 
     def tweets_saved(self, obj):
         try:

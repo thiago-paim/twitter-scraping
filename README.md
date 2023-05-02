@@ -149,10 +149,10 @@ req.create_scrapping_task()
 ### Raspar um único tweet e validar os dados
 ```
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
-from tweets.tasks import scrape_single_tweet
+from tweets.tasks import scrape_tweet
 
 tweet_id = '1636295637187584000'
-tweet = scrape_single_tweet.delay(tweet_id)
+tweet = scrape_tweet.delay(tweet_id)
 user_serializer = SnscrapeTwitterUserSerializer(data=tweet.user.__dict__)
 if not user_serializer.is_valid():
     print(user_serializer.errors)
@@ -181,3 +181,38 @@ from tweets.tasks import create_scrapping_requests
 
 create_scrapping_requests(TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS)
 ```
+
+# Pendencias
+
+- Scraping
+    - Tweets que estavam quotando algum tweet falharam, e suas requests precisam ser refeitas
+        - celery11.log
+        - reqs_to_retry = [1407, 1408, 1410, 1424, 1427, 1446, 1447, 1448, 1449, 1450, 1452, 1454, 1455, 1457, 1464, 1466, 1468, 1471, 1478, 1485, 1492, 1493, 1499, 1500, 1506, 1522, 1523, 1525, 1552, 1558, 1560, 1570, 1576, 1589, 1597, 1630, 1644, 1655, 1659, 1660, 1662, 1663, 1666, 1667, 1668, 1669, 1670, 1671, 1672, 1673, 1674, 1676, 1680, 1681, 1683, 1684, 1685, 1686, 1687, 1690, 1691, 1693, 1694, 1695, 1697, 1699, 1701, 1715, 1716, 1718, 1719, 1733, 1737, 1743, 1744, 1748, 1749, 1756, 1770, 1776, 1793, 1796, 1805, 1808, 1813, 1815, 1824, 1825, 1826, 1827, 1828, 1829, 1841, 1843, 1848, 1854, 1857]
+    - Chamar o TwitterTweetScraper em um tweet que gere erros, criar fixtures dos resultados e então escrever os testes
+    - Revisar username dos Requests que falharam com 0 tweets criados
+    - Checar execuções seguidas de scrape_tweet_replies com resultados diferentes. Exemplos:
+        - {'tweet_id': '1578369571924639745', 'req_id': 8593}
+            - {'created_tweets': 14, 'updated_tweets': 188}
+            - {'created_tweets': 201, 'updated_tweets': 2}
+        - {'tweet_id': '1580261253976842240', 'req_id': 8592}
+            - {'created_tweets': 37, 'updated_tweets': 164}
+            - {'created_tweets': 202, 'updated_tweets': 2}
+        - {'tweet_id': '1581859962648952834', 'req_id': 8591}
+            - {'created_tweets': 5, 'updated_tweets': 87}	
+            - {'created_tweets': 6, 'updated_tweets': 82}
+        - Mais casos listados nas tasks executadas no Flower
+
+- Infra
+    - Tasks rodando em um worker que foi encerrado ficam para sempre como STARTED no Flower
+    - Configurar logs rotativos para o Celery
+    - Configurar logs para o Flower
+    - Testar pipelines de scraping no Prefect
+        - Permite melhor visualização das etapas de scraping
+
+- Performance
+    - Colocar writes em transactions para evitar erros de locked database
+        - https://stackoverflow.com/questions/54998/how-scalable-is-sqlite
+
+- Usabilidade e Manutenção
+    - Mudar campo ScrapingRequest.include_replies para category
+    - Renomear tudo de "scrapping" para "scraping"
