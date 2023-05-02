@@ -25,7 +25,7 @@ services:
     container_name: celery
     build:
       context: ./twitter_scrapping
-    command: celery -A twitter_scrapping worker -l INFO -f celery.log -B
+    command: celery -A twitter_scrapping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
     volumes:
       - ./twitter_scrapping/:/usr/src/twitter_scrapping
     env_file:
@@ -35,8 +35,8 @@ services:
 
   flower:
     container_name: flower
-    image: mher/flower:0.9.5
-    command: celery flower
+    image: mher/flower:1.2
+    command: celery flower --persistent=True
     ports:
       - 8888:8888
     env_file:
