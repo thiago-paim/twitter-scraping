@@ -58,11 +58,13 @@ class ScrappingRequest(TimeStampedModel):
     def create_scrapping_task(self):
         from .tasks import scrape_user_tweets, scrape_tweet_replies
 
-        if self.status == "created":
-            if self.include_replies:
-                scrape_tweet_replies.delay(tweet_id=self.twitter_id, req_id=self.id)
-            else:
-                scrape_user_tweets.delay(req_id=self.id)
+        if self.status != "created":
+            self.reset()
+
+        if self.include_replies:
+            scrape_tweet_replies.delay(tweet_id=self.twitter_id, req_id=self.id)
+        else:
+            scrape_user_tweets.delay(req_id=self.id)
 
     def create_conversation_scraping_requests(self):
         tweets = Tweet.objects.filter(

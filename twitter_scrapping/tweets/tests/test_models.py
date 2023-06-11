@@ -1,5 +1,5 @@
 from copy import deepcopy
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from tweets.models import Tweet, TwitterUser, ScrappingRequest
@@ -9,6 +9,7 @@ from tweets.tests.tweet_samples import (
     user_tweet_2,
     user_tweet_3,
 )
+from unittest.mock import patch
 
 tz = timezone.get_default_timezone()
 
@@ -134,6 +135,25 @@ class ScrappingRequestModelTest(TestCase):
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
         )
+
+    @override_settings(CELERY_ALWAYS_EAGER=True)
+    @patch("tweets.tasks.scrape_user_tweets.delay")
+    def test_create_scrapping_task(self, scrape_user_tweets_mock):
+        self.req.create_scrapping_task()
+        scrape_user_tweets_mock.assert_called_with(req_id=self.req.id)
+
+    @override_settings(CELERY_ALWAYS_EAGER=True)
+    @patch("tweets.tasks.scrape_user_tweets.delay")
+    @patch("tweets.models.ScrappingRequest.reset")
+    def test_create_scrapping_task_on_finished_req(
+        self, reset_mock, scrape_user_tweets_mock
+    ):
+        self.req.status = "finished"
+        self.req.save()
+        self.req.create_scrapping_task()
+
+        reset_mock.assert_called()
+        scrape_user_tweets_mock.assert_called_with(req_id=self.req.id)
 
     def test_create_conversation_scraping_requests(self):
         record_tweet(user_tweet_1, self.req.id)
