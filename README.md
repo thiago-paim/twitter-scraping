@@ -72,11 +72,11 @@ Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplica
 # Como usar
 
 ## Executando raspagens
-- Acesse `http://localhost:8000/admin/` e clique em `Scrapping Requests`, ou acesse diretamente pelo link `http://localhost:8000/admin/tweets/scrapingrequest/`
-- Clique em `ADD SCRAPPING REQUEST`, no canto superior direito
+- Acesse `http://localhost:8000/admin/` e clique em `Scraping Requests`, ou acesse diretamente pelo link `http://localhost:8000/admin/tweets/scrapingrequest/`
+- Clique em `ADD SCRAPING REQUEST`, no canto superior direito
 - Preencha somente os campos `Username`, `Since` e `Until`
     - Caso queira realizar uma raspagem recursiva, marque a opção `Recurse` (mas lembre-se que este modo é significativamente mais demorado)
-- Clique em `SAVE` para criar a solicitação de raspagem, e então você será direcionado de volta para a listagem de Scrapping Requests
+- Clique em `SAVE` para criar a solicitação de raspagem, e então você será direcionado de volta para a listagem de Scraping Requests
 - Na tela de listagem, selecione a raspagem que acabou de criar clicando no checkbox
 - Clique em `Action` (acima da listagem), selecione a opção `Start scraping tasks`, e então clique em `Go`
 - Com isso a raspagem será iniciada, e seu status mudará de `Created` para `Started`
@@ -84,7 +84,7 @@ Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplica
 
 ## Exportando tweets
 
-Os tweets podem ser exportados de duas formas diferentes pelo admin: pela listagem de Tweets ou de Scrapping Requests
+Os tweets podem ser exportados de duas formas diferentes pelo admin: pela listagem de Tweets ou de Scraping Requests
 
 ### Exportando tweets pela listagem de Tweets
 Você pode exportar um arquivo selecionando os tweets que deseja
@@ -103,7 +103,7 @@ Você pode exportar um arquivo selecionando os tweets que deseja
 ### Exportando tweets pela listagem de ScrapingRequests
 
 Você também pode exportar tweets através da raspagem que os criou
-- Vá para a listagem de Scrapping Requests (`http://localhost:8000/admin/tweets/scrapingrequest/`)
+- Vá para a listagem de Scraping Requests (`http://localhost:8000/admin/tweets/scrapingrequest/`)
 - Selecione uma ou mais raspagens das quais deseja exportar os tweets
 - Clique em `Action` (acima da listagem), selecione a opção `Export scraping results`, e então clique em `Go`
 - O arquivo será salvo em `twitter_scraping/exports/`
@@ -176,10 +176,10 @@ export_csv(tweets)
 
 ### Criando scraping requests para um conjunto de usuarios e periodos 
 ```
-from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
+from tweets.values import TOTAL_SP_STATE_DEP, SCRAPING_PERIODS
 from tweets.tasks import create_scraping_requests
 
-create_scraping_requests(TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS)
+create_scraping_requests(TOTAL_SP_STATE_DEP, SCRAPING_PERIODS)
 ```
 
 # Pendencias
