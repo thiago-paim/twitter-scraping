@@ -145,5 +145,5 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-# Scrapping Settings
-MAX_SCRAPPINGS = 1
+# Scraping Settings
+MAX_SCRAPINGS = 1

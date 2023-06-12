@@ -698,7 +698,7 @@ TOTAL_POLITICIANS = (
     + TOTAL_SP_MG_RJ_ES_GOVERNORS
 )
 
-SCRAPPING_PERIODS = [
+SCRAPING_PERIODS = [
     {"since": "2022-09-01", "until": "2022-10-01"},
     {"since": "2022-10-01", "until": "2022-11-01"},
     {"since": "2022-11-01", "until": "2022-12-01"},

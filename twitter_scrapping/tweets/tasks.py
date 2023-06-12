@@ -364,12 +364,12 @@ def start_next_scraping_request():
     from .models import ScrapingRequest
 
     running_requests_count = ScrapingRequest.objects.filter(status="started").count()
-    if running_requests_count >= settings.MAX_SCRAPPINGS:
+    if running_requests_count >= settings.MAX_SCRAPINGS:
         return
 
     requests = list(ScrapingRequest.objects.filter(status="created"))
     started_reqs = []
-    while requests and running_requests_count < settings.MAX_SCRAPPINGS:
+    while requests and running_requests_count < settings.MAX_SCRAPINGS:
         req = requests.pop(0)
         req.create_scraping_task()
         logger.info(

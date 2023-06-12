@@ -147,14 +147,14 @@ class TweetManager(models.Manager):
 
     def politician_tweets(self):
         from django.db.models import Q
-        from tweets.values import TOTAL_POLITICIANS, SCRAPPING_PERIODS
+        from tweets.values import TOTAL_POLITICIANS, SCRAPING_PERIODS
 
         or_conditions = Q()
         for dep in TOTAL_POLITICIANS:
             or_conditions.add(Q(conversation_tweet__user__username__iexact=dep), Q.OR)
 
-        since = min([period["since"] for period in SCRAPPING_PERIODS])
-        until = max([period["until"] for period in SCRAPPING_PERIODS])
+        since = min([period["since"] for period in SCRAPING_PERIODS])
+        until = max([period["until"] for period in SCRAPING_PERIODS])
         since = timezone.make_aware(datetime.strptime(since, "%Y-%m-%d"))
         until = timezone.make_aware(datetime.strptime(until, "%Y-%m-%d"))
 
