@@ -1,4 +1,4 @@
-# twitter-scrapping
+# twitter-scraping
 
 Projeto para realizar scraping de tweets abertos, com filtros por usuário e data.
 
@@ -46,7 +46,7 @@ Os passos abaixo são específicos para Linux.
 
 Primeiro vá para a pasta do `manage.py` e execute as migrações
 ```
-cd twitter_scrapping/
+cd twitter_scraping/
 python manage.py migrate
 ```
 
@@ -58,7 +58,7 @@ docker run -d -p 5672:5672 rabbitmq
 
 Inicie o Worker Celery e o Flower
 ```
-celery -A twitter_scrapping worker -l INFO -f celery.log
+celery -A twitter_scraping worker -l INFO -f celery.log
 celery flower
 ```
 
@@ -215,4 +215,3 @@ create_scraping_requests(TOTAL_SP_STATE_DEP, SCRAPING_PERIODS)
 
 - Usabilidade e Manutenção
     - Mudar campo ScrapingRequest.include_replies para category
-    - Renomear tudo de "scrapping" para "scraping"

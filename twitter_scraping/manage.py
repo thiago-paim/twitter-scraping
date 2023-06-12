@@ -6,7 +6,7 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "twitter_scrapping.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "twitter_scraping.settings")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

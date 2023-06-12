@@ -3,9 +3,9 @@ import os
 from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "twitter_scrapping.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "twitter_scraping.settings")
 
-app = Celery("twitter_scrapping")
+app = Celery("twitter_scraping")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

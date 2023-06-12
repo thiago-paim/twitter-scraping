@@ -2,7 +2,7 @@
 FROM python:3.8-bullseye
 
 # set work directory
-WORKDIR /usr/src/twitter_scrapping
+WORKDIR /usr/src/twitter_scraping
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
