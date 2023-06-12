@@ -7,7 +7,7 @@ from django_extensions.db.models import TimeStampedModel
 from .values import BAD_WORDS
 
 
-class ScrappingRequest(TimeStampedModel):
+class ScrapingRequest(TimeStampedModel):
     STATUS_CHOICES = [
         ("created", "Created"),
         ("started", "Started"),
@@ -46,7 +46,7 @@ class ScrappingRequest(TimeStampedModel):
         return f"https://twitter.com/{self.username}"
 
     def __repr__(self) -> str:
-        return f"<ScrappingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
+        return f"<ScrapingRequest: id={self.id}, username={self.username}, include_replies={self.include_replies}>"
 
     def log(self, msg):
         if self.logs:
@@ -55,7 +55,7 @@ class ScrappingRequest(TimeStampedModel):
             self.logs = msg + "\n"
         self.save()
 
-    def create_scrapping_task(self):
+    def create_scraping_task(self):
         from .tasks import scrape_user_tweets, scrape_tweet_replies
 
         if self.status != "created":
@@ -68,7 +68,7 @@ class ScrappingRequest(TimeStampedModel):
 
     def create_conversation_scraping_requests(self):
         tweets = Tweet.objects.filter(
-            scrapping_request=self,
+            scraping_request=self,
             in_reply_to_id__isnull=True,
         )
         self.log(f"related_conversations={tweets.count()}")
@@ -76,7 +76,7 @@ class ScrappingRequest(TimeStampedModel):
         with transaction.atomic():
             # Using transactions to avoid db locks: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
             for tweet in tweets:
-                if not ScrappingRequest.objects.filter(
+                if not ScrapingRequest.objects.filter(
                     username=self.username,
                     twitter_id=tweet.twitter_id,
                     since=self.since,
@@ -84,7 +84,7 @@ class ScrappingRequest(TimeStampedModel):
                     include_replies=True,
                     status__in=["created", "started"],
                 ):
-                    req = ScrappingRequest.objects.create(
+                    req = ScrapingRequest.objects.create(
                         username=self.username,
                         twitter_id=tweet.twitter_id,
                         since=self.since,
@@ -147,14 +147,14 @@ class TweetManager(models.Manager):
 
     def politician_tweets(self):
         from django.db.models import Q
-        from tweets.values import TOTAL_POLITICIANS, SCRAPPING_PERIODS
+        from tweets.values import TOTAL_POLITICIANS, SCRAPING_PERIODS
 
         or_conditions = Q()
         for dep in TOTAL_POLITICIANS:
             or_conditions.add(Q(conversation_tweet__user__username__iexact=dep), Q.OR)
 
-        since = min([period["since"] for period in SCRAPPING_PERIODS])
-        until = max([period["until"] for period in SCRAPPING_PERIODS])
+        since = min([period["since"] for period in SCRAPING_PERIODS])
+        until = max([period["until"] for period in SCRAPING_PERIODS])
         since = timezone.make_aware(datetime.strptime(since, "%Y-%m-%d"))
         until = timezone.make_aware(datetime.strptime(until, "%Y-%m-%d"))
 
@@ -213,8 +213,8 @@ class Tweet(TimeStampedModel):
     like_count = models.IntegerField(default=0)
     quote_count = models.IntegerField(default=0)
     view_count = models.IntegerField(null=True, blank=True)
-    scrapping_request = models.ForeignKey(
-        ScrappingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
+    scraping_request = models.ForeignKey(
+        ScrapingRequest, on_delete=models.SET_NULL, null=True, related_name="tweets"
     )
     raw_tweet_object = models.JSONField(null=True, blank=True)
 

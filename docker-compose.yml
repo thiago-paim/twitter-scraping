@@ -12,24 +12,24 @@ services:
   django:
     container_name: django
     build:
-      context: ./twitter_scrapping
+      context: ./twitter_scraping
     command: sh -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./twitter_scrapping/:/usr/src/twitter_scrapping/
+      - ./twitter_scraping/:/usr/src/twitter_scraping/
     ports:
       - 8000:8000
     env_file:
-      - ./twitter_scrapping/.env
+      - ./twitter_scraping/.env
 
   celery:
     container_name: celery
     build:
-      context: ./twitter_scrapping
-    command: celery -A twitter_scrapping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
+      context: ./twitter_scraping
+    command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
     volumes:
-      - ./twitter_scrapping/:/usr/src/twitter_scrapping
+      - ./twitter_scraping/:/usr/src/twitter_scraping
     env_file:
-      - ./twitter_scrapping/.env
+      - ./twitter_scraping/.env
     depends_on:
       - rabbitmq
 
@@ -40,6 +40,6 @@ services:
     ports:
       - 8888:8888
     env_file:
-      - ./twitter_scrapping/.env
+      - ./twitter_scraping/.env
     depends_on:
       - rabbitmq

@@ -12,7 +12,7 @@ from snscrape.modules.twitter import (
     User as SNUser,
     Tweet as SNTweet,
 )
-from .models import Tweet, ScrappingRequest
+from .models import Tweet, ScrapingRequest
 
 _logger = logging.getLogger(__name__)
 
@@ -144,7 +144,7 @@ def tweet_to_json(tweet):
 
 def clear_unwanted_rt_requests():
     rts_ids = Tweet.objects.retweeted_tweets().values_list("twitter_id", flat=True)
-    reqs_for_rts = ScrappingRequest.objects.filter(twitter_id__in=rts_ids)
+    reqs_for_rts = ScrapingRequest.objects.filter(twitter_id__in=rts_ids)
     print(f"reqs_for_rts count: {len(reqs_for_rts)}")
     deleted = []
     for req in reqs_for_rts:
@@ -164,7 +164,7 @@ def clear_unwanted_rt_requests():
 
 def clear_unwanted_qt_requests():
     qts_ids = Tweet.objects.quoted_tweets().values_list("twitter_id", flat=True)
-    reqs_for_qts = ScrappingRequest.objects.filter(twitter_id__in=qts_ids)
+    reqs_for_qts = ScrapingRequest.objects.filter(twitter_id__in=qts_ids)
     print(f"reqs_for_qts count: {len(reqs_for_qts)}")
     deleted = []
     for req in reqs_for_qts:
@@ -186,7 +186,7 @@ def clear_duplicated_requests(username):
     tweets = Tweet.objects.filter(
         user__username__iexact=username, in_reply_to_id__isnull=True
     )
-    requests = ScrappingRequest.objects.filter(
+    requests = ScrapingRequest.objects.filter(
         username__iexact=username,
         include_replies=True,
         status="created",

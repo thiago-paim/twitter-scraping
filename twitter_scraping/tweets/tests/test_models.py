@@ -2,7 +2,7 @@ from copy import deepcopy
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from tweets.models import Tweet, TwitterUser, ScrappingRequest
+from tweets.models import Tweet, TwitterUser, ScrapingRequest
 from tweets.tasks import record_tweet
 from tweets.tests.tweet_samples import (
     user_tweet_1,
@@ -127,9 +127,9 @@ class TweetManagerTestCase(TestCase):
         )
 
 
-class ScrappingRequestModelTest(TestCase):
+class ScrapingRequestModelTest(TestCase):
     def setUp(self):
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             include_replies=False,
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
@@ -138,19 +138,19 @@ class ScrappingRequestModelTest(TestCase):
 
     @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.tasks.scrape_user_tweets.delay")
-    def test_create_scrapping_task(self, scrape_user_tweets_mock):
-        self.req.create_scrapping_task()
+    def test_create_scraping_task(self, scrape_user_tweets_mock):
+        self.req.create_scraping_task()
         scrape_user_tweets_mock.assert_called_with(req_id=self.req.id)
 
     @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.tasks.scrape_user_tweets.delay")
-    @patch("tweets.models.ScrappingRequest.reset")
-    def test_create_scrapping_task_on_finished_req(
+    @patch("tweets.models.ScrapingRequest.reset")
+    def test_create_scraping_task_on_finished_req(
         self, reset_mock, scrape_user_tweets_mock
     ):
         self.req.status = "finished"
         self.req.save()
-        self.req.create_scrapping_task()
+        self.req.create_scraping_task()
 
         reset_mock.assert_called()
         scrape_user_tweets_mock.assert_called_with(req_id=self.req.id)
@@ -162,7 +162,7 @@ class ScrappingRequestModelTest(TestCase):
 
         self.req.create_conversation_scraping_requests()
 
-        requests = ScrappingRequest.objects.filter(
+        requests = ScrapingRequest.objects.filter(
             username=self.req.username, include_replies=True, status="created"
         )
 
@@ -177,7 +177,7 @@ class ScrappingRequestModelTest(TestCase):
         self.req.create_conversation_scraping_requests()
         self.req.create_conversation_scraping_requests()
 
-        requests = ScrappingRequest.objects.filter(
+        requests = ScrapingRequest.objects.filter(
             username=self.req.username, include_replies=True, status="created"
         )
 
@@ -190,11 +190,11 @@ class ScrappingRequestModelTest(TestCase):
         record_tweet(user_tweet_3, self.req.id)
 
         self.req.create_conversation_scraping_requests()
-        new_req = ScrappingRequest.objects.get(twitter_id=str(user_tweet_1.id))
+        new_req = ScrapingRequest.objects.get(twitter_id=str(user_tweet_1.id))
         new_req.interrupt()
         self.req.create_conversation_scraping_requests()
 
-        requests = ScrappingRequest.objects.filter(
+        requests = ScrapingRequest.objects.filter(
             username=self.req.username, include_replies=True, status="created"
         )
 
