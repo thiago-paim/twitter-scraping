@@ -3,7 +3,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from unittest.mock import patch
 
-from tweets.models import Tweet, ScrappingRequest
+from tweets.models import Tweet, ScrapingRequest
 from tweets.tests.fixtures import (
     tweet1,
     tweet1_incomplete,
@@ -45,8 +45,8 @@ class BaseTweetTestCase(TestCase):
         self.assertEqual(user.listed_count, scraped_user.listedCount)
 
     def _validate_tweet(self, tweet, scraped_tweet):
-        if tweet.scrapping_request:
-            self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        if tweet.scraping_request:
+            self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         self.assertEqual(tweet.twitter_id, str(scraped_tweet.id))
         self.assertEqual(tweet.content, scraped_tweet.rawContent)
@@ -88,7 +88,7 @@ class BaseTweetTestCase(TestCase):
 
 class RecordTweetTest(BaseTweetTestCase):
     def setUp(self):
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
@@ -166,7 +166,7 @@ class RecordTweetTest(BaseTweetTestCase):
 
 class ScrapeUserTweetsTest(BaseTweetTestCase):
     def setUp(self):
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             include_replies=False,
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
@@ -175,10 +175,10 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
 
     @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.utils.CustomTwitterProfileScraper.get_items")
-    @patch("tweets.tasks.start_next_scrapping_request.delay")
+    @patch("tweets.tasks.start_next_scraping_request.delay")
     def test_scrape_user_tweets(
         self,
-        start_next_scrapping_request_mock,
+        start_next_scraping_request_mock,
         user_scraper_mock,
     ):
         user_scraper_mock.side_effect = [
@@ -188,17 +188,17 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         self.assertEqual({"created_tweets": 3, "updated_tweets": 0}, results)
 
         self.assertTrue(
-            ScrappingRequest.objects.filter(
+            ScrapingRequest.objects.filter(
                 twitter_id=user_tweet_1.id, username=self.req.username
             )
         )
         self.assertFalse(
-            ScrappingRequest.objects.filter(
+            ScrapingRequest.objects.filter(
                 twitter_id=user_tweet_2.id, username=self.req.username
             )
         )
         self.assertFalse(
-            ScrappingRequest.objects.filter(
+            ScrapingRequest.objects.filter(
                 twitter_id=user_tweet_3.id, username=self.req.username
             )
         )
@@ -208,7 +208,7 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         self._validate_tweet(tweets[1], user_tweet_2)
         self._validate_tweet(tweets[2], user_tweet_3)
 
-        start_next_scrapping_request_mock.assert_called()
+        start_next_scraping_request_mock.assert_called()
 
     def test_tombstone(self):
         ...
@@ -219,7 +219,7 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
 
 class ScrapeTweetRepliesTest(BaseTweetTestCase):
     def setUp(self):
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             since=timezone.datetime(2022, 1, 1, tzinfo=tz),
             until=timezone.datetime(2024, 1, 1, tzinfo=tz),
@@ -227,10 +227,8 @@ class ScrapeTweetRepliesTest(BaseTweetTestCase):
 
     @override_settings(CELERY_ALWAYS_EAGER=True)
     @patch("tweets.tasks.TwitterTweetScraper.get_items")
-    @patch("tweets.tasks.start_next_scrapping_request.delay")
-    def test_scrape_tweet_replies(
-        self, start_next_scrapping_request_mock, scraper_mock
-    ):
+    @patch("tweets.tasks.start_next_scraping_request.delay")
+    def test_scrape_tweet_replies(self, start_next_scraping_request_mock, scraper_mock):
         scraper_mock.side_effect = [
             [normal_tweet, tweet_in_reply_to, tweet_replying_another_reply].__iter__()
         ]
@@ -242,7 +240,7 @@ class ScrapeTweetRepliesTest(BaseTweetTestCase):
         self._validate_tweet(tweets[1], tweet_in_reply_to)
         self._validate_tweet(tweets[2], tweet_replying_another_reply)
 
-        start_next_scrapping_request_mock.assert_called()
+        start_next_scraping_request_mock.assert_called()
 
     def test_tombstone(self):
         ...
@@ -255,7 +253,7 @@ class TasksTest(TestCase):
     def setUp(self):
         self.tweet1 = deepcopy(tweet1)
         self.tweet1_incomplete = deepcopy(tweet1_incomplete)
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             since=timezone.datetime(2023, 3, 15, tzinfo=tz),
             until=timezone.datetime(2023, 3, 17, tzinfo=tz),
@@ -265,7 +263,7 @@ class TasksTest(TestCase):
         t, created = save_scrapped_tweet(self.tweet1, self.req.id)
         self.assertEqual(created, True)
         self.assertEqual(t.twitter_id, str(self.tweet1.id))
-        self.assertEqual(t.scrapping_request, self.req)
+        self.assertEqual(t.scraping_request, self.req)
 
     @patch("tweets.serializers.SnscrapeTweetSerializer.save")
     def test_save_invalid_scrapped_tweet(self, save_mock):

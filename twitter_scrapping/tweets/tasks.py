@@ -53,7 +53,7 @@ def record_tweet(raw_tweet, req_id=None):
         if type(tweet.retweetedTweet) == Tombstone:
             tweet.retweeted_id = tweet.retweetedTweet.id
 
-    tweet.scrapping_request = req_id
+    tweet.scraping_request = req_id
     tweet_serializer = SnscrapeTweetSerializer(data=tweet)
     if tweet_serializer.is_valid():
         tweet, created = tweet_serializer.save()
@@ -66,10 +66,10 @@ def record_tweet(raw_tweet, req_id=None):
 @shared_task
 def scrape_user_tweets(req_id):
     try:
-        from .models import ScrappingRequest
+        from .models import ScrapingRequest
 
         started_at = timezone.now()
-        req = ScrappingRequest.objects.get(id=req_id)
+        req = ScrapingRequest.objects.get(id=req_id)
         req.start()
 
         username = req.username
@@ -145,7 +145,7 @@ def scrape_user_tweets(req_id):
         )
         req.interrupt()
 
-    start_next_scrapping_request.delay()
+    start_next_scraping_request.delay()
     return {
         "created_tweets": len(created_tweets),
         "updated_tweets": len(updated_tweets),
@@ -155,10 +155,10 @@ def scrape_user_tweets(req_id):
 @shared_task
 def scrape_tweet_replies(tweet_id, req_id):
     try:
-        from .models import ScrappingRequest
+        from .models import ScrapingRequest
 
         started_at = timezone.now()
-        req = ScrappingRequest.objects.get(id=req_id)
+        req = ScrapingRequest.objects.get(id=req_id)
         req.start()
 
         username = req.username
@@ -224,7 +224,7 @@ def scrape_tweet_replies(tweet_id, req_id):
         )
         req.interrupt()
 
-    start_next_scrapping_request.delay()
+    start_next_scraping_request.delay()
     return {
         "created_tweets": len(created_tweets),
         "updated_tweets": len(updated_tweets),
@@ -241,10 +241,10 @@ def scrape_last_tweet_from_user(username):
 def scrape_tweets_and_replies(req_id):
     """DEPRECATED: TwitterSearchScraper doesn't work anymore"""
     try:
-        from .models import ScrappingRequest
+        from .models import ScrapingRequest
 
         started_at = timezone.now()
-        req = ScrappingRequest.objects.get(id=req_id)
+        req = ScrapingRequest.objects.get(id=req_id)
         req.start()
 
         username = req.username
@@ -254,12 +254,12 @@ def scrape_tweets_and_replies(req_id):
             f"Iniciando scrape_tweets_and_replies(username={username}, since={since}, until={until}, recurse={req.recurse})"
         )
 
-        started_scrapping_at = timezone.now()
+        started_scraping_at = timezone.now()
         query = f"from:{username} since:{since} until:{until}"
-        user_scrapping_results = TwitterSearchScraper(query).get_items()
+        user_scraping_results = TwitterSearchScraper(query).get_items()
         tweet_ids = []
         logger.info(f'Contando tweets do usuário "{username}"')
-        for tweet in user_scrapping_results:
+        for tweet in user_scraping_results:
             tweet_ids.append(tweet.id)
         logger.info(f"Encontrados {len(tweet_ids)} tweets")
 
@@ -309,7 +309,7 @@ def scrape_tweets_and_replies(req_id):
             + f"{len(created_tweets)} tweets criados, {len(updated_tweets)} tweets atualizados"
         )
         logger.info(
-            f"Tempo total={finished_at - started_at}; Tempo de scrapping={started_saving_at - started_scrapping_at}; Tempo de gravação={finished_at - started_saving_at}"
+            f"Tempo total={finished_at - started_at}; Tempo de scraping={started_saving_at - started_scraping_at}; Tempo de gravação={finished_at - started_saving_at}"
         )
     except Exception as e:
         tb = traceback.format_exc()
@@ -321,7 +321,7 @@ def scrape_tweets_and_replies(req_id):
 
 def save_scrapped_tweet(tweet_data, req_id):
     """DEPRECATED: Deprecated along with scrape_tweets_and_replies"""
-    tweet_data.scrapping_request = req_id
+    tweet_data.scraping_request = req_id
     tweet_serializer = SnscrapeTweetSerializer(data=tweet_data)
     if tweet_serializer.is_valid():
         tweet, created = tweet_serializer.save()
@@ -331,8 +331,8 @@ def save_scrapped_tweet(tweet_data, req_id):
 
 
 @shared_task
-def create_scrapping_requests(usernames, periods, include_replies=False):
-    from .models import ScrappingRequest
+def create_scraping_requests(usernames, periods, include_replies=False):
+    from .models import ScrapingRequest
 
     created_requests = []
     for period in periods:
@@ -340,40 +340,40 @@ def create_scrapping_requests(usernames, periods, include_replies=False):
         until = timezone.make_aware(datetime.strptime(period["until"], "%Y-%m-%d"))
 
         for username in usernames:
-            if not ScrappingRequest.objects.filter(
+            if not ScrapingRequest.objects.filter(
                 username=username,
                 since=since,
                 until=until,
                 include_replies=include_replies,
             ).exists():
-                req = ScrappingRequest.objects.create(
+                req = ScrapingRequest.objects.create(
                     username=username, since=since, until=until
                 )
                 req.save()
                 created_requests.append(req)
                 logger.info(
-                    f"Criando ScrappingRequest(username={username}, since={period['since']}, until={period['until']}, include_replies={include_replies})"
+                    f"Criando ScrapingRequest(username={username}, since={period['since']}, until={period['until']}, include_replies={include_replies})"
                 )
 
-    logger.info(f"Criados {len(created_requests)} ScrappingRequest's")
+    logger.info(f"Criados {len(created_requests)} ScrapingRequest's")
     return created_requests
 
 
 @shared_task
-def start_next_scrapping_request():
-    from .models import ScrappingRequest
+def start_next_scraping_request():
+    from .models import ScrapingRequest
 
-    running_requests_count = ScrappingRequest.objects.filter(status="started").count()
+    running_requests_count = ScrapingRequest.objects.filter(status="started").count()
     if running_requests_count >= settings.MAX_SCRAPPINGS:
         return
 
-    requests = list(ScrappingRequest.objects.filter(status="created"))
+    requests = list(ScrapingRequest.objects.filter(status="created"))
     started_reqs = []
     while requests and running_requests_count < settings.MAX_SCRAPPINGS:
         req = requests.pop(0)
-        req.create_scrapping_task()
+        req.create_scraping_task()
         logger.info(
-            f"Iniciando ScrappingRequest(username={req.username}, since={req.since}, until={req.until})"
+            f"Iniciando ScrapingRequest(username={req.username}, since={req.since}, until={req.until})"
         )
         running_requests_count += 1
         started_reqs.append(req.id)

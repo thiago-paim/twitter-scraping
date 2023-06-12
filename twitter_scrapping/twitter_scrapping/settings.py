@@ -138,8 +138,8 @@ DEFAULT_EXPORT_PATH = f"{BASE_DIR}/exports/"
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")
 
 CELERY_BEAT_SCHEDULE = {
-    # "start_next_scrapping_request": {
-    #     "task": "tweets.tasks.start_next_scrapping_request",
+    # "start_next_scraping_request": {
+    #     "task": "tweets.tasks.start_next_scraping_request",
     #     "schedule": crontab(minute="*/30"),
     # },
 }

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Tweet, TwitterUser, ScrappingRequest
+from .models import Tweet, TwitterUser, ScrapingRequest
 from .utils import export_csv
 
 
@@ -61,14 +61,14 @@ class ConversationUsernameFilter(BaseInputFieldFilter):
             return queryset.filter(conversation_tweet__user__username__iexact=value)
 
 
-class ScrappingRequestFilter(BaseInputFieldFilter):
+class ScrapingRequestFilter(BaseInputFieldFilter):
     title = "scraping request"
-    parameter_name = "scrapping_request"
+    parameter_name = "scraping_request"
 
     def queryset(self, request, queryset):
         value = self.value()
         if value:
-            return queryset.filter(scrapping_request__id=value)
+            return queryset.filter(scraping_request__id=value)
 
 
 @admin.register(Tweet)
@@ -87,7 +87,7 @@ class TweetAdmin(admin.ModelAdmin):
         ReplyToUsernameFilter,
         ConversationUsernameFilter,
         TwitterIdFilter,
-        ScrappingRequestFilter,
+        ScrapingRequestFilter,
         "created",
         "modified",
         "published_at",
@@ -98,7 +98,7 @@ class TweetAdmin(admin.ModelAdmin):
         "conversation_tweet",
         "retweeted_tweet",
         "quoted_tweet",
-        "scrapping_request",
+        "scraping_request",
     )
     actions = ["export_tweets"]
 
@@ -143,8 +143,8 @@ class TwitterUserAdmin(admin.ModelAdmin):
     list_display = ("id", "twitter_id", "username", "display_name", "location")
 
 
-@admin.register(ScrappingRequest)
-class ScrappingRequestAdmin(admin.ModelAdmin):
+@admin.register(ScrapingRequest)
+class ScrapingRequestAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "status",
@@ -165,8 +165,8 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "created",
     )
     actions = [
-        "start_scrapping",
-        "export_scrapping_results",
+        "start_scraping",
+        "export_scraping_results",
         "create_conversation_scraping_requests",
     ]
 
@@ -189,17 +189,17 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
     def tweets_saved(self, obj):
         try:
             # To Do: Include tweets from derived requests (might require a new fk field)
-            return Tweet.objects.filter(scrapping_request=obj).count()
+            return Tweet.objects.filter(scraping_request=obj).count()
         except Exception as e:
             return None
 
     tweets_saved.short_description = "Tweets saved"
 
-    def start_scrapping(self, request, queryset):
+    def start_scraping(self, request, queryset):
         for obj in queryset:
-            obj.create_scrapping_task()
+            obj.create_scraping_task()
 
-    start_scrapping.short_description = "Start scrapping tasks"
+    start_scraping.short_description = "Start scraping tasks"
 
     def create_conversation_scraping_requests(self, request, queryset):
         for obj in queryset:
@@ -209,10 +209,10 @@ class ScrappingRequestAdmin(admin.ModelAdmin):
         "Create conversation scraping requests"
     )
 
-    def export_scrapping_results(self, request, queryset):
-        scrapping_ids = list(queryset.values_list("id", flat=True))
-        filename = f"scrapping_requests id={scrapping_ids}"
-        tweets = Tweet.objects.filter(scrapping_request__in=queryset)
+    def export_scraping_results(self, request, queryset):
+        scraping_ids = list(queryset.values_list("id", flat=True))
+        filename = f"scraping_requests id={scraping_ids}"
+        tweets = Tweet.objects.filter(scraping_request__in=queryset)
         export_csv(tweets, filename)
 
-    export_scrapping_results.short_description = "Export scrapping results"
+    export_scraping_results.short_description = "Export scraping results"

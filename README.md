@@ -1,6 +1,6 @@
 # twitter-scrapping
 
-Projeto para realizar scrapping de tweets abertos, com filtros por usuário e data.
+Projeto para realizar scraping de tweets abertos, com filtros por usuário e data.
 
 # Setup
 
@@ -72,13 +72,13 @@ Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplica
 # Como usar
 
 ## Executando raspagens
-- Acesse `http://localhost:8000/admin/` e clique em `Scrapping Requests`, ou acesse diretamente pelo link `http://localhost:8000/admin/tweets/scrappingrequest/`
+- Acesse `http://localhost:8000/admin/` e clique em `Scrapping Requests`, ou acesse diretamente pelo link `http://localhost:8000/admin/tweets/scrapingrequest/`
 - Clique em `ADD SCRAPPING REQUEST`, no canto superior direito
 - Preencha somente os campos `Username`, `Since` e `Until`
     - Caso queira realizar uma raspagem recursiva, marque a opção `Recurse` (mas lembre-se que este modo é significativamente mais demorado)
 - Clique em `SAVE` para criar a solicitação de raspagem, e então você será direcionado de volta para a listagem de Scrapping Requests
 - Na tela de listagem, selecione a raspagem que acabou de criar clicando no checkbox
-- Clique em `Action` (acima da listagem), selecione a opção `Start scrapping tasks`, e então clique em `Go`
+- Clique em `Action` (acima da listagem), selecione a opção `Start scraping tasks`, e então clique em `Go`
 - Com isso a raspagem será iniciada, e seu status mudará de `Created` para `Started`
 - Quando ela terminar, seu status será atualizado para `Finished`
 
@@ -95,19 +95,19 @@ Você pode exportar um arquivo selecionando os tweets que deseja
     - Para selecionar todos da página, clique no checkbox do header da tabela de tweets
     - Para selecionar todos da sua busca, clique no checkbox do header da tabela de tweets e então no texto `Select all {total} tweets`
 - Clique em `Action` (acima da listagem), selecione a opção `Export selected tweets`, e então clique em `Go`
-- O arquivo será salvo em `twitter_scrapping/exports/`
+- O arquivo será salvo em `twitter_scraping/exports/`
     - O título do arquivo será formado pela data e hora da geração, seguidos do termo `tweets` e os filtros aplicados (caso haja algum)
 
 **ATENÇÃO:** Caso tenha aplicado algum filtro, é fundamental clicar para selecionar todos os tweets antes de mandar exportar, caso contrário ele gerará um arquivo com os filtros no nome, mas sem os tweets
 
-### Exportando tweets pela listagem de ScrappingRequests
+### Exportando tweets pela listagem de ScrapingRequests
 
 Você também pode exportar tweets através da raspagem que os criou
-- Vá para a listagem de Scrapping Requests (`http://localhost:8000/admin/tweets/scrappingrequest/`)
+- Vá para a listagem de Scrapping Requests (`http://localhost:8000/admin/tweets/scrapingrequest/`)
 - Selecione uma ou mais raspagens das quais deseja exportar os tweets
-- Clique em `Action` (acima da listagem), selecione a opção `Export scrapping results`, e então clique em `Go`
-- O arquivo será salvo em `twitter_scrapping/exports/`
-    - O título do arquivo será formado pela data e hora da geração, seguidos do termo `scrapping_requests` e os IDs das raspagens selecionadas
+- Clique em `Action` (acima da listagem), selecione a opção `Export scraping results`, e então clique em `Go`
+- O arquivo será salvo em `twitter_scraping/exports/`
+    - O título do arquivo será formado pela data e hora da geração, seguidos do termo `scraping_requests` e os IDs das raspagens selecionadas
 
 **ATENÇÃO:** Atualmente cada tweet só mantém a referência para raspagem mais recente que o encontrou. Isso significa que se uma raspagem mais recente encontrar um tweet já raspado, ele perderá a referencia para a sua raspagem inicial, e por isso não será mais incluído na exportação dela.
 
@@ -119,31 +119,31 @@ Também é possível realizar operações direto pelo shell do Django, que pode 
 python manage.py shell
 ```
 
-### Iniciando uma task de scrapping manualmente
+### Iniciando uma task de scraping manualmente
 
-Precisamos criar um objeto `ScrappingRequest` com os parâmetros do scrapping, e então chamar o método para iniciar a task
+Precisamos criar um objeto `ScrapingRequest` com os parâmetros do scraping, e então chamar o método para iniciar a task
 ```
-from tweets.models import ScrappingRequest
+from tweets.models import ScrapingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
 until = '2022-09-02'
-req = ScrappingRequest.objects.create(
+req = ScrapingRequest.objects.create(
     username=username, since=since, until=until
 )
-req.create_scrapping_task()
+req.create_scraping_task()
 ```
 
 Para raspar todas as respostas e conversas derivadas dos tweets, podemos usar `recurse=True`.
 Porém este parâmetro pode aumentar significativamente o tempo de raspagem.
 ```
-from tweets.models import ScrappingRequest
+from tweets.models import ScrapingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
 until = '2022-09-02'
-req = ScrappingRequest.objects.create(
+req = ScrapingRequest.objects.create(
     username=username, since=since, until=until, recurse=True
 )
-req.create_scrapping_task()
+req.create_scraping_task()
 ```
 
 ### Raspar um único tweet e validar os dados
@@ -177,9 +177,9 @@ export_csv(tweets)
 ### Criando scraping requests para um conjunto de usuarios e periodos 
 ```
 from tweets.values import TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS
-from tweets.tasks import create_scrapping_requests
+from tweets.tasks import create_scraping_requests
 
-create_scrapping_requests(TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS)
+create_scraping_requests(TOTAL_SP_STATE_DEP, SCRAPPING_PERIODS)
 ```
 
 # Pendencias

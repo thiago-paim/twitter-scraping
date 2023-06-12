@@ -75,7 +75,7 @@ class SnscrapeTweetSerializer(serializers.ModelSerializer):
             "likeCount",
             "quoteCount",
             "viewCount",
-            "scrapping_request",
+            "scraping_request",
             "raw_tweet_object",
         ]
 

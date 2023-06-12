@@ -2,7 +2,7 @@ from copy import deepcopy
 from django.test import TestCase
 from django.utils import timezone
 
-from tweets.models import ScrappingRequest
+from tweets.models import ScrapingRequest
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 from tweets.tests.fixtures import (
     tweet1,
@@ -22,7 +22,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.tweet1_updated_user = deepcopy(tweet1_updated_user)
         self.tweet1_updated_both = deepcopy(tweet1_updated_both)
 
-        self.req = ScrappingRequest.objects.create(
+        self.req = ScrapingRequest.objects.create(
             username="GergelyOrosz",
             since=timezone.datetime(2023, 3, 15, tzinfo=tz),
             until=timezone.datetime(2023, 3, 17, tzinfo=tz),
@@ -33,7 +33,7 @@ class SnscrapeTweetSerializerTest(TestCase):
             self.tweet1_updated_user,
             self.tweet1_updated_both,
         ]:
-            t.scrapping_request = self.req.id
+            t.scraping_request = self.req.id
 
     def test_create_tweet(self):
         user_serializer = SnscrapeTwitterUserSerializer(data=deepcopy(self.tweet1.user))
@@ -54,7 +54,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
         self.assertEqual(tweet.user.id, user.id)
         self.assertEqual(tweet.user.twitter_id, user.twitter_id)
 
@@ -74,7 +74,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         user = tweet.user
         self.assertEqual(user.twitter_id, str(self.tweet1.user.id))
@@ -104,7 +104,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         user = tweet.user
         self.assertEqual(user.twitter_id, str(self.tweet1.user.id))
@@ -134,7 +134,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1_updated_tweet.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1_updated_tweet.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1_updated_tweet.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         user = tweet.user
         self.assertEqual(user.twitter_id, str(self.tweet1.user.id))
@@ -156,7 +156,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         user = tweet.user
         self.assertEqual(user.twitter_id, str(self.tweet1_updated_user.user.id))
@@ -190,7 +190,7 @@ class SnscrapeTweetSerializerTest(TestCase):
         self.assertEqual(tweet.retweet_count, self.tweet1_updated_both.retweetCount)
         self.assertEqual(tweet.like_count, self.tweet1_updated_both.likeCount)
         self.assertEqual(tweet.quote_count, self.tweet1_updated_both.quoteCount)
-        self.assertEqual(tweet.scrapping_request.id, self.req.id)
+        self.assertEqual(tweet.scraping_request.id, self.req.id)
 
         user = tweet.user
         self.assertEqual(user.twitter_id, str(self.tweet1_updated_both.user.id))
