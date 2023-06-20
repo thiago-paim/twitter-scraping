@@ -4,6 +4,7 @@ django_environ==0.10.0
 django-extensions==3.2.1
 djangorestframework==3.14.0
 flower==1.2.0
+gunicorn==20.1.0
 ipython==8.11.0
 numpy==1.24.2
 pandas==1.5.3
