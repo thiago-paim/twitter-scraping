@@ -15,7 +15,7 @@ services:
       context: ./twitter_scraping
     command: sh -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./twitter_scraping/:/usr/src/twitter_scraping/
+      - ./:/usr/src/
     ports:
       - 8000:8000
     env_file:
@@ -27,7 +27,7 @@ services:
       context: ./twitter_scraping
     command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
     volumes:
-      - ./twitter_scraping/:/usr/src/twitter_scraping
+      - ./:/usr/src/
     env_file:
       - ./twitter_scraping/.env
     depends_on:
