@@ -1,0 +1,7 @@
+[program:twitter-scraping]
+command=/home/django/twitter-scraping/venv/bin/gunicorn twitter_scraping.twitter_scraping.wsgi:application --bind 127.0.0.1:8000
+directory=/home/django/twitter-scraping
+user=django
+autostart=true
+autorestart=true
+redirect_stderr=true

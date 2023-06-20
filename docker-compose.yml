@@ -9,12 +9,12 @@ services:
     env_file:
       - ./twitter_scraping/.env
 
-  # rabbitmq:
-  #   container_name: rabbitmq
-  #   image: rabbitmq:latest
-  #   ports:
-  #     - 5672:5672
-  #     - 15672:15672
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:latest
+    ports:
+      - 5672:5672
+      - 15672:15672
 
   django:
     container_name: django
@@ -22,32 +22,34 @@ services:
       context: ./twitter_scraping
     command: sh -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./twitter_scraping/:/usr/src/twitter_scraping/
+      - ./:/usr/src/
     ports:
       - 8000:8000
     env_file:
       - ./twitter_scraping/.env
     depends_on:
       - db
-  # celery:
-  #   container_name: celery
-  #   build:
-  #     context: ./twitter_scraping
-  #   command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
-  #   volumes:
-  #     - ./twitter_scraping/:/usr/src/twitter_scraping
-  #   env_file:
-  #     - ./twitter_scraping/.env
-  #   depends_on:
-  #     - rabbitmq
 
-  # flower:
-  #   container_name: flower
-  #   image: mher/flower:1.2
-  #   command: celery flower --persistent=True
-  #   ports:
-  #     - 8888:8888
-  #   env_file:
-  #     - ./twitter_scraping/.env
-  #   depends_on:
-  #     - rabbitmq
+  celery:
+    container_name: celery
+    build:
+      context: ./twitter_scraping
+    command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
+    volumes:
+      - ./twitter_scraping/:/usr/src/twitter_scraping
+    env_file:
+      - ./twitter_scraping/.env
+    depends_on:
+      - db
+      - rabbitmq
+
+  flower:
+    container_name: flower
+    image: mher/flower:1.2
+    command: celery flower --persistent=True
+    ports:
+      - 8888:8888
+    env_file:
+      - ./twitter_scraping/.env
+    depends_on:
+      - rabbitmq

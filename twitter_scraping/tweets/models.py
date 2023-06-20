@@ -74,7 +74,7 @@ class ScrapingRequest(TimeStampedModel):
         self.log(f"related_conversations={tweets.count()}")
         reqs = []
         with transaction.atomic():
-            # Using transactions to avoid db locks: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
+            # Using transactions to avoid db locks on SQLite: https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout/30440711#30440711
             for tweet in tweets:
                 if not ScrapingRequest.objects.filter(
                     username=self.username,
