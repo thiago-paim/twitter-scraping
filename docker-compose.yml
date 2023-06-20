@@ -3,11 +3,14 @@ version: '3'
 services:
 
   db:
-    image: postgres
+    container_name: postgres
+    image: postgres:13
     volumes:
       - ./data/db:/var/lib/postgresql/data
     env_file:
       - ./twitter_scraping/.env
+    ports:
+      - 5432:5432
 
   rabbitmq:
     container_name: rabbitmq

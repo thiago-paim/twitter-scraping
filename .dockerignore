@@ -1,3 +1,4 @@
 data/*
 logs/*
 twitter_scraping/exports/*
+twitter_scraping/db.sqlite3
