@@ -36,7 +36,7 @@ services:
       context: ./twitter_scraping
     command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
     volumes:
-      - ./twitter_scraping/:/usr/src/twitter_scraping
+      - ./:/usr/src/
     env_file:
       - ./twitter_scraping/.env
     depends_on:
