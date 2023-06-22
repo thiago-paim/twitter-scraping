@@ -165,6 +165,7 @@ FLOWER_PORT = env("FLOWER_PORT")
 
 # Scraping Settings
 MAX_SCRAPINGS = 1
+AUTO_START_SCRAPING = False
 
 
 # Needed for Django Debug Toolbar

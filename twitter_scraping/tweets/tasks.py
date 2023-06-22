@@ -224,7 +224,9 @@ def scrape_tweet_replies(tweet_id, req_id):
         )
         req.interrupt()
 
-    start_next_scraping_request.delay()
+    if settings.AUTO_START_SCRAPING:
+        start_next_scraping_request.delay()
+        
     return {
         "created_tweets": len(created_tweets),
         "updated_tweets": len(updated_tweets),
