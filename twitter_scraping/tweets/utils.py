@@ -13,6 +13,7 @@ from snscrape.modules.twitter import (
     Tweet as SNTweet,
 )
 from .models import Tweet, ScrapingRequest
+from .values import ELECTED_SP_STATE_DEP
 
 _logger = logging.getLogger(__name__)
 
@@ -26,8 +27,14 @@ def export_csv(queryset, filename=None):
 
     df = pd.DataFrame(tweet.export() for tweet in queryset)
     df.to_csv(filepath, chunksize=chunksize)
+    
+    
+def export_sp_deputies_csv():
+    queryset = Tweet.objects.filter(conversation_tweet__user__username__in=ELECTED_SP_STATE_DEP)
+    export_csv(queryset, filename="sp_deputies_tweets")
 
 
+# To Do: Apagar estes Scrapers customizados e atualizar a versão do SNScrape com a correção oficial
 class CustomTwitterProfileScraper(TwitterProfileScraper):
     def _graphql_timeline_tweet_item_result_to_tweet(self, result, tweetId=None):
         if result["__typename"] == "Tweet":
