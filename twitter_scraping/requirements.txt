@@ -1,5 +1,5 @@
 celery==5.2.7
-Django==4.1.9
+Django==4.1.10
 django_environ==0.10.0
 django-extensions==3.2.1
 djangorestframework==3.14.0
