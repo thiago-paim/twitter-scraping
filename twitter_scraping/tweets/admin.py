@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import Tweet, TwitterUser, ScrapingRequest
-from .utils import export_csv
+from .utils import export
 
 
 class BaseInputFieldFilter(admin.SimpleListFilter):
@@ -133,7 +133,7 @@ class TweetAdmin(admin.ModelAdmin):
     def export_tweets(self, request, queryset):
         filters = request.GET.urlencode()
         filename = f"tweets {filters}"
-        export_csv(queryset, filename)
+        export(queryset, filename)
 
     export_tweets.short_description = "Export selected tweets"
 
@@ -213,6 +213,6 @@ class ScrapingRequestAdmin(admin.ModelAdmin):
         scraping_ids = list(queryset.values_list("id", flat=True))
         filename = f"scraping_requests id={scraping_ids}"
         tweets = Tweet.objects.filter(scraping_request__in=queryset)
-        export_csv(tweets, filename)
+        export(tweets, filename)
 
     export_scraping_results.short_description = "Export scraping results"

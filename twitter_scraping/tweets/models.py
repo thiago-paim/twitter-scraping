@@ -1,10 +1,15 @@
 import re
 from datetime import datetime
 from django.db import models, transaction
+from django.db.models import CharField
+from django.db.models.functions import Length
 from django.utils import timezone
 from django.utils.text import Truncator
 from django_extensions.db.models import TimeStampedModel
 from .values import BAD_WORDS
+
+
+CharField.register_lookup(Length)
 
 
 class ScrapingRequest(TimeStampedModel):
