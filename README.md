@@ -167,11 +167,11 @@ if not tweet_serializer.is_valid():
 ### Exportar para CSV os tweets de um usuario
 ```
 from tweets.models import Tweet, TwitterUser
-from tweets.utils import export_csv
+from tweets.utils import export
 
 user = TwitterUser.objects.last()
 tweets = Tweet.objects.filter(user=user)
-export_csv(tweets)
+export(tweets)
 ```
 
 ### Criando scraping requests para um conjunto de usuarios e periodos 

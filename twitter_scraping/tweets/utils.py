@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
 import json
@@ -12,22 +13,56 @@ from snscrape.modules.twitter import (
     User as SNUser,
     Tweet as SNTweet,
 )
-from .models import Tweet, ScrapingRequest
+from tweets.models import Tweet, ScrapingRequest
+from tweets.values import ELECTED_SP_STATE_DEP, TOTAL_ELECTED_DEPS
 
 _logger = logging.getLogger(__name__)
 
 
-def export_csv(queryset, filename=None):
+def export(queryset, filename=None, format="csv"):
+    print(f"export({queryset.count()=}, {filename=}, {format=})")
     if not filename:
         filename = f"{queryset.model.__name__.lower()}s"
     time_signature = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-    filepath = f"{settings.DEFAULT_EXPORT_PATH}{time_signature} {filename}.csv"
-    chunksize = 1000
-
+    filepath = f"{settings.DEFAULT_EXPORT_PATH}{time_signature} {filename}"
     df = pd.DataFrame(tweet.export() for tweet in queryset)
-    df.to_csv(filepath, chunksize=chunksize)
+    
+    if format == "csv":
+        filepath = f"{filename}.csv"
+        chunksize = 1000
+        df.to_csv(filepath, chunksize=chunksize, sep=";")
+        
+    if format == "parquet":
+        filepath = f"{filename}.parquet"
+        df.to_parquet(filepath)
+    
+    
+def export_sp_deputies_csv(filename="sp_deputies_tweets", format="csv", min_length=None):
+    queryset = Tweet.objects.filter(
+        conversation_tweet__user__username__in=ELECTED_SP_STATE_DEP
+    )
+    if min_length:
+        queryset = queryset.filter(content__length__gt=min_length)
+        
+    export(queryset, filename=filename, format=format)
+    
+
+def export_southeast_deputies_csv(filename="se_est_fed_dep_tweets", format="csv", election_tweets=True, min_length=None):
+    queryset = Tweet.objects.filter(
+        conversation_tweet__user__username__in=TOTAL_ELECTED_DEPS
+    )
+    if election_tweets:
+        since = timezone.make_aware(datetime.strptime("2022-09-01", "%Y-%m-%d"))
+        until = timezone.make_aware(datetime.strptime("2022-11-01", "%Y-%m-%d"))
+        queryset = queryset.filter(published_at__gte=since, published_at__lte=until)
+    
+    if min_length:
+        queryset = queryset.filter(content__length__gt=min_length)
+    
+    export(queryset, filename=filename, format=format)
 
 
+# To Do: Apagar estes Scrapers customizados e atualizar a versão do SNScrape com a correção oficial
 class CustomTwitterProfileScraper(TwitterProfileScraper):
     def _graphql_timeline_tweet_item_result_to_tweet(self, result, tweetId=None):
         if result["__typename"] == "Tweet":
@@ -57,7 +92,7 @@ class CustomTwitterTweetScraper(TwitterTweetScraper):
                             not in entry["content"]["itemContent"]["tweet_results"]
                         ):
                             _logger.warning(
-                                f'Skipping empty tweet entry {entry["entryId"]}'
+                                f"Skipping empty tweet entry {entry['entryId']}"
                             )
                             continue
                         yield self._graphql_timeline_tweet_item_result_to_tweet(
@@ -74,7 +109,7 @@ class CustomTwitterTweetScraper(TwitterTweetScraper):
                                 or "-tweet-" not in item["entryId"]
                             ):
                                 raise ScraperException(
-                                    f'Unexpected home conversation entry ID: {item["entryId"]!r}'
+                                    f"Unexpected home conversation entry ID: {item['entryId']!r}"
                                 )
                             tweetId = int(item["entryId"].split("-tweet-", 1)[1])
                             if (
@@ -97,7 +132,7 @@ class CustomTwitterTweetScraper(TwitterTweetScraper):
                     "conversationthread-"
                 ):  # TODO show more cursor?
                     for item in entry["content"]["items"]:
-                        if item["entryId"].startswith(f'{entry["entryId"]}-tweet-'):
+                        if item["entryId"].startswith(f"{entry['entryId']}-tweet-"):
                             if (
                                 len(
                                     item["entryId"][len(entry["entryId"]) + 7 :].split(
@@ -107,7 +142,7 @@ class CustomTwitterTweetScraper(TwitterTweetScraper):
                                 > 1
                             ):
                                 _logger.warning(
-                                    f'Skipping unrecognised entry ID: {entry["entryId"]!r}'
+                                    f"Skipping unrecognised entry ID: {entry['entryId']!r}"
                                 )
                                 continue
                             tweetId = int(item["entryId"][len(entry["entryId"]) + 7 :])
@@ -117,7 +152,7 @@ class CustomTwitterTweetScraper(TwitterTweetScraper):
                             )
                 elif not entry["entryId"].startswith("cursor-"):
                     _logger.warning(
-                        f'Skipping unrecognised entry ID: {entry["entryId"]!r}'
+                        f"Skipping unrecognised entry ID: {entry['entryId']!r}"
                     )
 
 

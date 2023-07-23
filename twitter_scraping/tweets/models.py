@@ -1,10 +1,15 @@
 import re
 from datetime import datetime
 from django.db import models, transaction
+from django.db.models import CharField
+from django.db.models.functions import Length
 from django.utils import timezone
 from django.utils.text import Truncator
 from django_extensions.db.models import TimeStampedModel
 from .values import BAD_WORDS
+
+
+CharField.register_lookup(Length)
 
 
 class ScrapingRequest(TimeStampedModel):
@@ -231,18 +236,19 @@ class Tweet(TimeStampedModel):
 
     def export(self):
         return {
-            "url": self.get_twitter_url(),
+            "id": self.twitter_id,
             "date": self.published_at,
-            "content": self.content,
             "user": self.user.username,
-            "reply_count": self.reply_count,
-            "retweet_count": self.retweet_count,
-            "like_count": self.like_count,
-            "quote_count": self.quote_count,
+            "content": self.content,
             "in_reply_to_id": self.in_reply_to_id,
             "in_reply_to_user": self.get_in_reply_to_user(),
             "conversation_id": self.conversation_id,
             "conversation_user": self.get_conversation_user(),
+            "reply_count": self.reply_count,
+            "retweet_count": self.retweet_count,
+            "like_count": self.like_count,
+            "quote_count": self.quote_count,
+            "view_count": self.view_count,
         }
 
     def is_reply(self):
