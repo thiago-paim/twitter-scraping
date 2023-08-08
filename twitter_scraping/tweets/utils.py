@@ -14,7 +14,7 @@ from snscrape.modules.twitter import (
     Tweet as SNTweet,
 )
 from tweets.models import Tweet, ScrapingRequest
-from tweets.values import ELECTED_SP_STATE_DEP, TOTAL_ELECTED_DEPS
+from tweets.values import ELECTED_SP_STATE_DEP, ELECTED_SP_FED_DEP
 
 _logger = logging.getLogger(__name__)
 
@@ -28,38 +28,38 @@ def export(queryset, filename=None, format="csv"):
     df = pd.DataFrame(tweet.export() for tweet in queryset)
     
     if format == "csv":
-        filepath = f"{filename}.csv"
+        filepath = f"{filepath}.csv"
         chunksize = 1000
         df.to_csv(filepath, chunksize=chunksize, sep=";")
         
     if format == "parquet":
-        filepath = f"{filename}.parquet"
+        filepath = f"{filepath}.parquet"
         df.to_parquet(filepath)
     
-    
-def export_sp_deputies_csv(filename="sp_deputies_tweets", format="csv", min_length=None):
+def export_tweets_by_users_threads(users, filename=None, election_tweets=True, min_length=None, format="csv"):
     queryset = Tweet.objects.filter(
-        conversation_tweet__user__username__in=ELECTED_SP_STATE_DEP
+        conversation_tweet__user__username__in=users
     )
+    
+    if election_tweets:
+        since = timezone.make_aware(datetime.strptime("2022-09-01", "%Y-%m-%d"))
+        until = timezone.make_aware(datetime.strptime("2022-11-01", "%Y-%m-%d"))
+        queryset = queryset.filter(published_at__gte=since, published_at__lte=until)
+        
     if min_length:
         queryset = queryset.filter(content__length__gt=min_length)
         
     export(queryset, filename=filename, format=format)
     
-
-def export_southeast_deputies_csv(filename="se_est_fed_dep_tweets", format="csv", election_tweets=True, min_length=None):
-    queryset = Tweet.objects.filter(
-        conversation_tweet__user__username__in=TOTAL_ELECTED_DEPS
+def export_sp_est_deps(min_length=None, format="csv"):
+    return export_tweets_by_users_threads(
+        users=ELECTED_SP_STATE_DEP, filename='sp_est_deps_tweets', format=format, min_length=min_length
     )
-    if election_tweets:
-        since = timezone.make_aware(datetime.strptime("2022-09-01", "%Y-%m-%d"))
-        until = timezone.make_aware(datetime.strptime("2022-11-01", "%Y-%m-%d"))
-        queryset = queryset.filter(published_at__gte=since, published_at__lte=until)
     
-    if min_length:
-        queryset = queryset.filter(content__length__gt=min_length)
-    
-    export(queryset, filename=filename, format=format)
+def export_sp_fed_deps(min_length=None, format="csv"):
+    return export_tweets_by_users_threads(
+        users=ELECTED_SP_FED_DEP, filename='sp_fed_deps_tweets', format=format, min_length=min_length
+    )
 
 
 # To Do: Apagar estes Scrapers customizados e atualizar a versão do SNScrape com a correção oficial
