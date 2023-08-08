@@ -2,6 +2,16 @@ version: '3'
 
 services:
 
+  db:
+    container_name: postgres
+    image: postgres:13
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    env_file:
+      - ./twitter_scraping/.env
+    ports:
+      - 5432:5432
+
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:latest
@@ -20,6 +30,8 @@ services:
       - 8000:8000
     env_file:
       - ./twitter_scraping/.env
+    depends_on:
+      - db
 
   celery:
     container_name: celery
@@ -31,6 +43,7 @@ services:
     env_file:
       - ./twitter_scraping/.env
     depends_on:
+      - db
       - rabbitmq
 
   flower:
