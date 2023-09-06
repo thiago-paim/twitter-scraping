@@ -19,21 +19,12 @@ class ScrapingRequest(TimeStampedModel):
         ("finished", "Finished"),
         ("interrupted", "Interrupted"),
     ]
-    # CATEGORY_CHOICES = [
-    #     ("user_tweets", "User Tweets"),
-    #     ("tweet_replies", "Tweet Replies"),
-    # ]
     username = models.CharField(max_length=50, db_index=True, null=True, blank=True)
     twitter_id = models.CharField(max_length=30, db_index=True, null=True, blank=True)
     since = models.DateTimeField(null=True, blank=True)
     until = models.DateTimeField(null=True, blank=True)
     recurse = models.BooleanField(default=False)
-    include_replies = models.BooleanField(
-        default=True
-    )  # To Do: refactor to a choice field
-    # category = models.CharField(
-    #    max_length=14, choices=CATEGORY_CHOICES, default="user_tweets"
-    # )
+    include_replies = models.BooleanField(default=True)
     started = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
     status = models.CharField(

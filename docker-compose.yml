@@ -3,7 +3,6 @@ version: '3'
 services:
 
   db:
-    container_name: postgres
     image: postgres:13
     volumes:
       - ./data/db:/var/lib/postgresql/data
@@ -13,14 +12,12 @@ services:
       - 5432:5432
 
   rabbitmq:
-    container_name: rabbitmq
     image: rabbitmq:latest
     ports:
       - 5672:5672
       - 15672:15672
 
   django:
-    container_name: django
     build:
       context: ./twitter_scraping
     command: sh -c "python3 manage.py migrate && python3 manage.py runserver 0.0.0.0:8000"
@@ -34,7 +31,6 @@ services:
       - db
 
   celery:
-    container_name: celery
     build:
       context: ./twitter_scraping
     command: celery -A twitter_scraping worker --loglevel INFO --logfile celery.log --concurrency 1 --beat
@@ -47,7 +43,6 @@ services:
       - rabbitmq
 
   flower:
-    container_name: flower
     image: mher/flower:1.2
     command: celery flower --persistent=True
     ports:

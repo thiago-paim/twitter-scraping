@@ -13,61 +13,38 @@ A aplicação pode ser rodada localmente através do Docker, ou iniciando os pro
 Primeiro certifique-se de estar com o [Docker](https://docs.docker.com/engine/) instalado e rodando. Caso esteja usando Windows, você pode usar o [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/).
 
 Crie as imagens necessárias para a aplicação com o comando:
-```
+
+```bash
 docker compose build
 ```
 
 Depois inicie aplicação com:
-```
+
+```bash
 docker compose up -d
 ```
+
 ou então, se quiser acompanhar as saídas da aplicação, use:
-```
+
+```bash
 docker compose up
 ```
 
 Por fim, você precisa criar um usuario local.
 Rode os comandos abaixo para acessar a pasta do Django e iniciar a criação do usuario
+
+```bash
+docker exec -it twitter-scraping-django-1 python3 manage.py createsuperuser
 ```
-docker exec -it django /bin/bash
-python manage.py createsuperuser
-```
+
 Preencha os dados do usuario, e então digite `exit` para voltar a pasta do projeto
 
+Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplicação está funcionando
 
 Quando quiser encerrar a aplicação use:
-```
+```bash
 docker compose down
 ```
-
-## Rodando manualmente
-Caso não queira usar o Docker, você também pode rodar os componentes da aplicação manualmente. 
-Os passos abaixo são específicos para Linux.
-
-Primeiro vá para a pasta do `manage.py` e execute as migrações
-```
-cd twitter_scraping/
-python manage.py migrate
-```
-
-Inicie o Rabbit MQ pelo Docker
-```
-sudo service docker start
-docker run -d -p 5672:5672 rabbitmq
-```
-
-Inicie o Worker Celery e o Flower
-```
-celery -A twitter_scraping worker -l INFO -f celery.log
-celery flower
-```
-
-Por fim inicie o Django
-```
-python manage.py runserver
-```
-
-Acesse o admin em `http://localhost:8000/admin/` para se certificar que a aplicação está funcionando
 
 # Como usar
 
@@ -115,14 +92,15 @@ Você também pode exportar tweets através da raspagem que os criou
 ## Executando comandos pelo shell
 
 Também é possível realizar operações direto pelo shell do Django, que pode ser iniciado com:
-```
+```bash
 python manage.py shell
 ```
 
 ### Iniciando uma task de scraping manualmente
 
 Precisamos criar um objeto `ScrapingRequest` com os parâmetros do scraping, e então chamar o método para iniciar a task
-```
+
+```python
 from tweets.models import ScrapingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
@@ -135,7 +113,8 @@ req.create_scraping_task()
 
 Para raspar todas as respostas e conversas derivadas dos tweets, podemos usar `recurse=True`.
 Porém este parâmetro pode aumentar significativamente o tempo de raspagem.
-```
+
+```python
 from tweets.models import ScrapingRequest
 username = 'andreawerner_'
 since = '2022-09-01'
@@ -147,7 +126,7 @@ req.create_scraping_task()
 ```
 
 ### Raspar um único tweet e validar os dados
-```
+```python
 from tweets.serializers import SnscrapeTwitterUserSerializer, SnscrapeTweetSerializer
 from tweets.tasks import scrape_tweet
 
@@ -165,7 +144,7 @@ if not tweet_serializer.is_valid():
 ```
 
 ### Exportar para CSV os tweets de um usuario
-```
+```python
 from tweets.models import Tweet, TwitterUser
 from tweets.utils import export
 
@@ -175,43 +154,23 @@ export(tweets)
 ```
 
 ### Criando scraping requests para um conjunto de usuarios e periodos 
-```
+```python
 from tweets.values import TOTAL_SP_STATE_DEP, SCRAPING_PERIODS
 from tweets.tasks import create_scraping_requests
 
 create_scraping_requests(TOTAL_SP_STATE_DEP, SCRAPING_PERIODS)
 ```
 
-# Pendencias
+### Testando aplicação
 
-- Scraping
-    - Tweets que estavam quotando algum tweet falharam, e suas requests precisam ser refeitas
-        - celery11.log
-        - reqs_to_retry = [1407, 1408, 1410, 1424, 1427, 1446, 1447, 1448, 1449, 1450, 1452, 1454, 1455, 1457, 1464, 1466, 1468, 1471, 1478, 1485, 1492, 1493, 1499, 1500, 1506, 1522, 1523, 1525, 1552, 1558, 1560, 1570, 1576, 1589, 1597, 1630, 1644, 1655, 1659, 1660, 1662, 1663, 1666, 1667, 1668, 1669, 1670, 1671, 1672, 1673, 1674, 1676, 1680, 1681, 1683, 1684, 1685, 1686, 1687, 1690, 1691, 1693, 1694, 1695, 1697, 1699, 1701, 1715, 1716, 1718, 1719, 1733, 1737, 1743, 1744, 1748, 1749, 1756, 1770, 1776, 1793, 1796, 1805, 1808, 1813, 1815, 1824, 1825, 1826, 1827, 1828, 1829, 1841, 1843, 1848, 1854, 1857]
-    - Chamar o TwitterTweetScraper em um tweet que gere erros, criar fixtures dos resultados e então escrever os testes
-    - Revisar username dos Requests que falharam com 0 tweets criados
-    - Checar execuções seguidas de scrape_tweet_replies com resultados diferentes. Exemplos:
-        - {'tweet_id': '1578369571924639745', 'req_id': 8593}
-            - {'created_tweets': 14, 'updated_tweets': 188}
-            - {'created_tweets': 201, 'updated_tweets': 2}
-        - {'tweet_id': '1580261253976842240', 'req_id': 8592}
-            - {'created_tweets': 37, 'updated_tweets': 164}
-            - {'created_tweets': 202, 'updated_tweets': 2}
-        - {'tweet_id': '1581859962648952834', 'req_id': 8591}
-            - {'created_tweets': 5, 'updated_tweets': 87}	
-            - {'created_tweets': 6, 'updated_tweets': 82}
-        - Mais casos listados nas tasks executadas no Flower
+```bash
+docker exec -it twitter-scraping-django-1 python manage.py test tweets/tests/
+```
 
-- Infra
-    - Tasks rodando em um worker que foi encerrado ficam para sempre como STARTED no Flower
-    - Configurar logs rotativos para o Celery
-    - Configurar logs para o Flower
-    - Testar pipelines de scraping no Prefect
-        - Permite melhor visualização das etapas de scraping
 
-- Performance
-    - Colocar writes em transactions para evitar erros de locked database
-        - https://stackoverflow.com/questions/54998/how-scalable-is-sqlite
+# Melhorias futuras
 
-- Usabilidade e Manutenção
-    - Mudar campo ScrapingRequest.include_replies para category
+- Tasks rodando em um worker que foi encerrado ficam para sempre como STARTED no Flower
+- Configurar logs rotativos para o Celery
+- Configurar logs para o Flower
+- Testar pipelines de scraping no Prefect pra visualizar melhor as etapas
