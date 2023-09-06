@@ -10,14 +10,13 @@ from snscrape.modules.twitter import (
     TwitterTweetScraper,
     TwitterSearchScraper,
     TwitterProfileScraper,
-    User as SNUser,
     Tweet as SNTweet,
     Tombstone,
 )
 import traceback
 
 from .serializers import SnscrapeTweetSerializer
-from .utils import CustomTwitterProfileScraper, tweet_to_json, CustomTwitterTweetScraper
+from .utils import tweet_to_json
 
 logger = get_task_logger(__name__)
 
@@ -83,7 +82,7 @@ def scrape_user_tweets(req_id):
         MIN_TWEETS = (
             5  # É comum que usuários tenham 1 ou 2 tweets fixados no topo do perfil
         )
-        tweet_scrapper = CustomTwitterProfileScraper(username).get_items()
+        tweet_scrapper = TwitterProfileScraper(username).get_items()
 
         # Loop manual necessário para que erros em tweets pontuais não travem o generator
         while True:
@@ -169,7 +168,7 @@ def scrape_tweet_replies(tweet_id, req_id):
         created_tweets = []
         updated_tweets = []
 
-        tweet_scraper = CustomTwitterTweetScraper(
+        tweet_scraper = TwitterTweetScraper(
             tweet_id, mode=TwitterTweetScraperMode.SCROLL
         ).get_items()
 
@@ -235,7 +234,7 @@ def scrape_tweet_replies(tweet_id, req_id):
 
 @shared_task
 def scrape_last_tweet_from_user(username):
-    tweet = next(CustomTwitterProfileScraper(username).get_items())
+    tweet = next(TwitterProfileScraper(username).get_items())
     return tweet
 
 

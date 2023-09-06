@@ -174,7 +174,7 @@ class ScrapeUserTweetsTest(BaseTweetTestCase):
         )
 
     @override_settings(CELERY_ALWAYS_EAGER=True)
-    @patch("tweets.utils.CustomTwitterProfileScraper.get_items")
+    @patch("snscrape.modules.twitter.TwitterProfileScraper.get_items")
     @patch("tweets.tasks.start_next_scraping_request.delay")
     def test_scrape_user_tweets(
         self,

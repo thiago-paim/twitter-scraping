@@ -2,7 +2,6 @@ from rest_framework import serializers
 from rest_framework.fields import empty
 from snscrape.modules.twitter import User as SNUser, Tweet as SNTweet
 from .models import Tweet, TwitterUser
-from .utils import tweet_to_json
 
 
 class SnscrapeTwitterUserSerializer(serializers.ModelSerializer):

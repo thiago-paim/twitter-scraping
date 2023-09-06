@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 from django.db import models, transaction
 from django.db.models import CharField
