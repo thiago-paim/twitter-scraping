@@ -2,6 +2,9 @@
 
 Projeto para realizar scraping de tweets abertos, com filtros por usuário e data.
 
+**Atenção**: Com as mudanças recentes feitas no Twitter, o scraping não está mais funcionando.
+Mais detalhes em: https://github.com/JustAnotherArchivist/snscrape/issues/996
+
 # Setup
 
 Primeiro crie um arquivo `.env` na mesma pasta e com o mesmo conteúdo do arquivo `.env.sample`.
